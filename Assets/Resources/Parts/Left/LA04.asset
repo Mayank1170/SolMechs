@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 571fc33cf5ffc384f936636e0c1412b2, type: 3}
+  m_Name: LA04
+  m_EditorClassIdentifier: 
+  partCode: LA04
+  partName: HeartCore Patch
+  statModifiers:
+    HP: 90
+    ATK: 0
+    DEF: 0
+    ENG: 20
+    SPD: 5
+    SYS: 0
+    PROC: 0
+  moves:
+  - moveName: Nano Repair
+    baseDamage: 0
+    damageType: Energy
+    targetType: 0
+    effect: +30 HP
+  rawData: 'partCode: LA04
+
+    partName: HeartCore Patch
+
+    HP: 90
+
+    ATK:
+    0
+
+    ENG: 20
+
+    SPD: 5
+
+    move: Nano Repair|0|Energy|Single|+30 HP'

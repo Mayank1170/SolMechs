@@ -1,0 +1,94 @@
+{
+  "Titan": {
+    "RightArm": {
+      "ATK": 35,
+      "ENG": 0,
+      "SPD": -15,
+      "Dmg": 60,
+      "Type": "Physical"
+    },
+    "LeftArm": {
+      "ATK": 5,
+      "ENG": 0,
+      "SPD": -5,
+      "Dmg": -30,
+      "Type": "Physical"
+    },
+    "LowerBody": {
+      "ATK": 0,
+      "ENG": 0,
+      "SPD": -10,
+      "Dmg": 0,
+      "Type": "Physical"
+    }
+  },
+  "Specter": {
+    "RightArm": {
+      "ATK": 20,
+      "ENG": 0,
+      "SPD": -5,
+      "Dmg": 50,
+      "Type": "Physical"
+    },
+    "LeftArm": {
+      "ATK": 0,
+      "ENG": 20,
+      "SPD": -5,
+      "Dmg": 30,
+      "Type": "Energy"
+    },
+    "LowerBody": {
+      "ATK": 0,
+      "ENG": 0,
+      "SPD": 25,
+      "Dmg": 0,
+      "Type": "Energy"
+    }
+  },
+  "Arclight": {
+    "RightArm": {
+      "ATK": 0,
+      "ENG": 30,
+      "SPD": -10,
+      "Dmg": 60,
+      "Type": "Energy"
+    },
+    "LeftArm": {
+      "ATK": 0,
+      "ENG": 25,
+      "SPD": -5,
+      "Dmg": 45,
+      "Type": "Energy"
+    },
+    "LowerBody": {
+      "ATK": 0,
+      "ENG": 0,
+      "SPD": 30,
+      "Dmg": 0,
+      "Type": "Energy"
+    }
+  },
+  "HeartCore": {
+    "RightArm": {
+      "ATK": 5,
+      "ENG": 10,
+      "SPD": 0,
+      "Dmg": 20,
+      "Type": "Energy"
+    },
+    "LeftArm": {
+      "ATK": 0,
+      "ENG": 20,
+      "SPD": -5,
+      "Dmg": -40,
+      "Type": "Energy"
+    },
+    "LowerBody": {
+      "ATK": 0,
+      "ENG": 0,
+      "SPD": 10,
+      "Dmg": -10,
+      "Type": "Energy"
+    }
+  }
+}
