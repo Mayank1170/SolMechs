@@ -79,7 +79,7 @@ public class GameController : MonoBehaviour
     {
         if (playerUnit == null || playerUnit.IsPartBroken(sourceSlot))
         {
-            combatlogText.text += $"❌ {sourceSlot} está quebrado ou playerUnit nulo.\n";
+            combatlogText.text += $"❌ {sourceSlot} is broken or playerUnit is null.\n";
             ScrollToBottom();
             return;
         }
@@ -118,7 +118,7 @@ public class GameController : MonoBehaviour
     {
         if (targetSlot == ModuleSlot.Matrix && !(enemyUnit?.CanAttackMatrix() ?? false))
         {
-            combatlogText.text += $"❌ Matrix só pode ser atacada após destruir um dos braços!\n";
+            combatlogText.text += $"❌ Matrix can only be targeted after destroying an arm!\n";
             ScrollToBottom();
             return;
         }
@@ -127,13 +127,13 @@ public class GameController : MonoBehaviour
         ApplyDamage(enemyUnit, targetSlot, damage);
         ApplyEffect(playerUnit, targetSlot, selectedAttack, true); // Apply to attacker
 
-        combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} usou {selectedAttack?.attackName ?? "No Attack"} em {targetSlot}!\n";
-        if (damage > 0) combatlogText.text += $"◀ {enemyUnit?.Name ?? "Enemy"} sofreu {damage} de dano.\n";
+        combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} used {selectedAttack?.attackName ?? "No Attack"} on {targetSlot}!\n";
+        if (damage > 0) combatlogText.text += $"◀ {enemyUnit?.Name ?? "Enemy"} took {damage} damage.\n";
         ScrollToBottom();
 
         if (enemyUnit?.matrixHP <= 0)
         {
-            combatlogText.text += $"🏁 {enemyUnit?.Name ?? "Enemy"} foi destruído!\n";
+            combatlogText.text += $"🏁 {enemyUnit?.Name ?? "Enemy"} has been destroyed!\n";
             EndBattle();
         }
         else
@@ -153,7 +153,7 @@ public class GameController : MonoBehaviour
 
         if (validModules.Count == 0)
         {
-            combatlogText.text += $"🏁 {enemyUnit.Name} não pode mais atacar. Vitória!\n";
+            combatlogText.text += $"🏁 {enemyUnit.Name} can no longer attack. Victory!\n";
             EndBattle();
             return;
         }
@@ -168,13 +168,13 @@ public class GameController : MonoBehaviour
         ApplyDamage(playerUnit, target, damage);
         ApplyEffect(enemyUnit, target, attack, true); // Apply to attacker
 
-        combatlogText.text += $"◀ {enemyUnit.Name} usou {attack.attackName} em {target}!\n";
-        if (damage > 0) combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} sofreu {damage} de dano.\n";
+        combatlogText.text += $"◀ {enemyUnit.Name} used {attack.attackName} on {target}!\n";
+        if (damage > 0) combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} took {damage} damage.\n";
         ScrollToBottom();
 
         if (playerUnit?.matrixHP <= 0)
         {
-            combatlogText.text += $"🏁 {playerUnit?.Name ?? "Player"} foi destruído!\n";
+            combatlogText.text += $"🏁 {playerUnit?.Name ?? "Player"} has been destroyed!\n";
             EndBattle();
         }
         else
@@ -212,7 +212,6 @@ public class GameController : MonoBehaviour
                     string stat = effectParts[1].Split(' ')[0].ToLower(); // e.g., "DEF", "HP", "Evasion"
                     bool isBuff = effect.StartsWith("+");
 
-                    // Explicit cast to MechBattle.TargetType and use enum comparison
                     MechBattle.TargetType moveTargetType = part.moves[0].targetType;
                     ModuleSlot effectTarget = isAttackerEffect ?
                         (moveTargetType == MechBattle.TargetType.Self ? targetSlot : targetSlot) :
@@ -225,15 +224,15 @@ public class GameController : MonoBehaviour
                         {
                             if (stat == "def" || stat == "hp" || stat == "evasion" || stat == "spd")
                             {
-                                status.buffs[stat.ToUpper()] = value; // Store buff until part is destroyed
+                                status.buffs[stat.ToUpper()] = value;
                                 combatlogText.text += $"▶ {attacker.Name} gained +{value} {stat.ToUpper()} on {effectTarget}.\n";
                             }
                         }
-                        else // Debuff (e.g., "-10 DEF")
+                        else
                         {
                             if (stat == "def" || stat == "hp" || stat == "evasion" || stat == "spd")
                             {
-                                status.buffs[stat.ToUpper()] = -value; // Store debuff
+                                status.buffs[stat.ToUpper()] = -value;
                                 combatlogText.text += $"▶ {attacker.Name} lost {value} {stat.ToUpper()} on {effectTarget}.\n";
                             }
                         }
@@ -262,7 +261,6 @@ public class GameController : MonoBehaviour
             ? (attacker.chassis.baseStats?.ATK ?? 1) / Mathf.Max(1f, defender.chassis.baseStats?.DEF ?? 1)
             : (attacker.chassis.baseStats?.ENG ?? 1) / Mathf.Max(1f, defender.chassis.baseStats?.SYS ?? 1);
 
-        // Apply buffs/debuffs to damage calculation, prioritizing lower body buffs
         if (attacker.partStatuses.ContainsKey(ModuleSlot.LowerBody))
         {
             var lowerStatus = attacker.partStatuses[ModuleSlot.LowerBody];
@@ -271,10 +269,10 @@ public class GameController : MonoBehaviour
         if (defender.partStatuses.ContainsKey(targetSlot))
         {
             var targetStatus = defender.partStatuses[targetSlot];
-            if (targetStatus.buffs.ContainsKey("DEF")) multiplier -= (targetStatus.buffs["DEF"] * 0.01f); // 1% DEF reduction per point
+            if (targetStatus.buffs.ContainsKey("DEF")) multiplier -= (targetStatus.buffs["DEF"] * 0.01f);
         }
 
-        return Mathf.FloorToInt(baseDamage * Mathf.Max(0.1f, multiplier)); // Minimum 10% damage
+        return Mathf.FloorToInt(baseDamage * Mathf.Max(0.1f, multiplier));
     }
 
     ModuleSlot ChooseTargetSlot(MechUnit unit, AttackData attack)
