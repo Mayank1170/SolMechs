@@ -15,12 +15,12 @@ MonoBehaviour:
   matrixCode: M03
   matrixName: Arclight
   baseStats:
-    HP: 40
+    HP: 90
     ATK: 40
-    ENG: 80
     DEF: 20
-    SYS: 30
+    ENG: 80
     SPD: 70
+    SYS: 30
     PROC: 60
   passive1: Residual Energy
   passive2: First Shot

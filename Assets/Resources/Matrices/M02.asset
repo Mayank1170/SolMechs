@@ -15,12 +15,12 @@ MonoBehaviour:
   matrixCode: M02
   matrixName: Specter
   baseStats:
-    HP: 50
-    ATK: 20
-    ENG: 40
+    HP: 90
+    ATK: 40
     DEF: 30
-    SYS: 60
+    ENG: 40
     SPD: 60
+    SYS: 60
     PROC: 80
   passive1: Hostile Instinct
   passive2: Backdoor

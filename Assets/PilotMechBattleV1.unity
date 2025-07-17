@@ -664,6 +664,7 @@ MonoBehaviour:
   - {fileID: 2135419332}
   - {fileID: 373509975}
   - {fileID: 1469197553}
+  - {fileID: 1981230877}
   combatScroll: {fileID: 1293052503}
   playerMechObject: {fileID: 1407266290}
   enemyMechObject: {fileID: 221124140}

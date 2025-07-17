@@ -15,12 +15,12 @@ MonoBehaviour:
   matrixCode: M04
   matrixName: HeartCore
   baseStats:
-    HP: 60
+    HP: 120
     ATK: 30
-    ENG: 50
     DEF: 40
-    SYS: 40
+    ENG: 50
     SPD: 50
+    SYS: 40
     PROC: 60
   passive1: Auto-Regen
   passive2: Echo Sensor
