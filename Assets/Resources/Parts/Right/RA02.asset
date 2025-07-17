@@ -15,16 +15,16 @@ MonoBehaviour:
   partCode: RA02
   partName: Specter Cannon
   statModifiers:
-    HP: 100
-    ATK: 20
-    DEF: 0
+    HP: 80
+    ATK: 40
+    DEF: 5
     ENG: 10
     SPD: 10
-    SYS: 0
+    SYS: 5
     PROC: 0
   moves:
   - moveName: Piercing Shot
-    baseDamage: 45
+    baseDamage: 65
     damageType: Physical
     targetType: 0
     effect: 
@@ -34,10 +34,10 @@ MonoBehaviour:
 
     HP: 100
 
-    ATK:
-    20
+    ATK: 20
 
-    ENG: 10
+    ENG:
+    10
 
     SPD: 10
 

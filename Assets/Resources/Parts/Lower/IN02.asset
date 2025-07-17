@@ -15,9 +15,9 @@ MonoBehaviour:
   partCode: IN02
   partName: Specter Veil
   statModifiers:
-    HP: 120
+    HP: 90
     ATK: 0
-    DEF: 0
+    DEF: 5
     ENG: 20
     SPD: 5
     SYS: 0
@@ -26,7 +26,7 @@ MonoBehaviour:
   - moveName: Phase Drift
     baseDamage: 0
     damageType: Energy
-    targetType: 0
+    targetType: 1
     effect: +10 Evasion (1 turn)
   rawData: 'partCode: IN02
 
@@ -34,12 +34,11 @@ MonoBehaviour:
 
     HP: 120
 
-    ATK:
-    0
+    ATK: 0
 
-    ENG: 20
+    ENG:
+    20
 
     SPD: 5
 
-    move: Phase Drift|0|Energy|Self|+10 Evasion
-    (1 turn)'
+    move: Phase Drift|0|Energy|Self|+10 Evasion (1 turn)'

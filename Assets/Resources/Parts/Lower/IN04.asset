@@ -15,9 +15,9 @@ MonoBehaviour:
   partCode: IN04
   partName: HeartCore Stabilizer
   statModifiers:
-    HP: 130
+    HP: 100
     ATK: 0
-    DEF: 0
+    DEF: 5
     ENG: 25
     SPD: 0
     SYS: 0
@@ -26,7 +26,7 @@ MonoBehaviour:
   - moveName: System Reboot
     baseDamage: 0
     damageType: Energy
-    targetType: 0
+    targetType: 1
     effect: +15 HP
   rawData: 'partCode: IN04
 

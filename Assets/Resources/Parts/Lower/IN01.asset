@@ -15,7 +15,7 @@ MonoBehaviour:
   partCode: IN01
   partName: Titan Treads
   statModifiers:
-    HP: 160
+    HP: 140
     ATK: 0
     DEF: 0
     ENG: 10
@@ -26,7 +26,7 @@ MonoBehaviour:
   - moveName: Ground Fortify
     baseDamage: 0
     damageType: 
-    targetType: 0
+    targetType: 1
     effect: +15 DEF (1 turn)
   rawData: 'partCode: IN01
 
@@ -34,12 +34,11 @@ MonoBehaviour:
 
     HP: 160
 
-    ATK:
-    0
+    ATK: 0
 
-    ENG: 10
+    ENG:
+    10
 
     SPD: 0
 
-    move: Ground Fortify|0|Physical|Self|+15 DEF
-    (1 turn)'
+    move: Ground Fortify|0|Physical|Self|+15 DEF (1 turn)'

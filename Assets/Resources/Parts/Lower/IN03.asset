@@ -15,9 +15,9 @@ MonoBehaviour:
   partCode: IN03
   partName: Arclight Thrusters
   statModifiers:
-    HP: 110
+    HP: 90
     ATK: 0
-    DEF: 0
+    DEF: 5
     ENG: 20
     SPD: 15
     SYS: 0
@@ -26,7 +26,7 @@ MonoBehaviour:
   - moveName: Energy Dash
     baseDamage: 0
     damageType: Energy
-    targetType: 0
+    targetType: 1
     effect: +15 SPD (1 turn)
   rawData: 'partCode: IN03
 
@@ -41,5 +41,4 @@ MonoBehaviour:
 
     SPD: 15
 
-    move: Energy Dash|0|Energy|Self|+15 SPD (1
-    turn)'
+    move: Energy Dash|0|Energy|Self|+15 SPD (1 turn)'

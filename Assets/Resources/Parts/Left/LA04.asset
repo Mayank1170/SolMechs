@@ -15,18 +15,18 @@ MonoBehaviour:
   partCode: LA04
   partName: HeartCore Patch
   statModifiers:
-    HP: 90
+    HP: 100
     ATK: 0
-    DEF: 0
+    DEF: 20
     ENG: 20
-    SPD: 5
+    SPD: 20
     SYS: 0
     PROC: 0
   moves:
   - moveName: Nano Repair
     baseDamage: 0
     damageType: Energy
-    targetType: 0
+    targetType: 1
     effect: +30 HP
   rawData: 'partCode: LA04
 
@@ -34,10 +34,10 @@ MonoBehaviour:
 
     HP: 90
 
-    ATK:
-    0
+    ATK: 0
 
-    ENG: 20
+    ENG:
+    20
 
     SPD: 5
 

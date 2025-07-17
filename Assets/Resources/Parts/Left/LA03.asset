@@ -17,9 +17,9 @@ MonoBehaviour:
   statModifiers:
     HP: 100
     ATK: 0
-    DEF: 0
-    ENG: 25
-    SPD: 8
+    DEF: 5
+    ENG: 30
+    SPD: 40
     SYS: 0
     PROC: 0
   moves:
@@ -34,10 +34,10 @@ MonoBehaviour:
 
     HP: 100
 
-    ATK:
-    0
+    ATK: 0
 
-    ENG: 25
+    ENG:
+    25
 
     SPD: 8
 

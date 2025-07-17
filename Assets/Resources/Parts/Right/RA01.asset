@@ -15,9 +15,9 @@ MonoBehaviour:
   partCode: RA01
   partName: Titan Claw
   statModifiers:
-    HP: 120
-    ATK: 30
-    DEF: 0
+    HP: 100
+    ATK: 20
+    DEF: 30
     ENG: 5
     SPD: 5
     SYS: 0

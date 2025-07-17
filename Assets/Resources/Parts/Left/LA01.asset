@@ -15,19 +15,19 @@ MonoBehaviour:
   partCode: LA01
   partName: Titan Bulwark
   statModifiers:
-    HP: 140
-    ATK: 5
-    DEF: 0
-    ENG: 5
-    SPD: 0
+    HP: 100
+    ATK: 20
+    DEF: 30
+    ENG: 0
+    SPD: 10
     SYS: 0
     PROC: 0
   moves:
-  - moveName: Reinforce Frame
-    baseDamage: 0
+  - moveName: Titan Punch
+    baseDamage: 40
     damageType: Physical
     targetType: 0
-    effect: +20 DEF
+    effect: 
   rawData: 'partCode: LA01
 
     partName: Titan Bulwark
