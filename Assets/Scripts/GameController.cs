@@ -9,6 +9,14 @@ public class GameController : MonoBehaviour
     public Text combatlogText;
     public Button[] actionButtons;
     public ScrollRect combatScroll;
+    public Slider playerMatrixHPBar;
+    public Slider playerRightArmHPBar;
+    public Slider playerLeftArmHPBar;
+    public Slider playerLowerBodyHPBar;
+    public Slider enemyMatrixHPBar;
+    public Slider enemyRightArmHPBar;
+    public Slider enemyLeftArmHPBar;
+    public Slider enemyLowerBodyHPBar;
 
     [Header("Mech GameObjects")]
     public GameObject playerMechObject;
@@ -17,8 +25,11 @@ public class GameController : MonoBehaviour
     private MechUnit playerUnit;
     private MechUnit enemyUnit;
     private AttackData selectedAttack;
-    private enum BattleState { SelectingAttack, SelectingTarget, EnemyTurn, Victory }
+    private enum BattleState { SelectingAttack, SelectingTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState = BattleState.SelectingAttack;
+    private int turnCounter = 0;
+    private Dictionary<ModuleSlot, int> playerMaxHPs = new Dictionary<ModuleSlot, int>();
+    private Dictionary<ModuleSlot, int> enemyMaxHPs = new Dictionary<ModuleSlot, int>();
 
     void Awake()
     {
@@ -32,10 +43,58 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
-        combatlogText.text = ">> Combat Initialized!\n";
-        combatlogText.text += $">> {playerUnit?.Name ?? "Player"} vs {enemyUnit?.Name ?? "Enemy"}!\n";
+        InitializeMaxHPs();
+        InitializeHealthBars();
+        combatlogText.text = "Battle start!\n";
+        combatlogText.text += $"{playerUnit?.Name ?? "Player"} vs {enemyUnit?.Name ?? "Enemy"}!\n\n";
         ScrollToBottom();
         RenderActionButtons();
+    }
+
+    void InitializeMaxHPs()
+    {
+        if (playerUnit != null)
+        {
+            playerMaxHPs[ModuleSlot.Matrix] = playerUnit.matrixHP;
+            foreach (var slot in playerUnit.partStatuses.Keys)
+            {
+                playerMaxHPs[slot] = playerUnit.partStatuses[slot].currentHP;
+            }
+        }
+        if (enemyUnit != null)
+        {
+            enemyMaxHPs[ModuleSlot.Matrix] = enemyUnit.matrixHP;
+            foreach (var slot in enemyUnit.partStatuses.Keys)
+            {
+                enemyMaxHPs[slot] = enemyUnit.partStatuses[slot].currentHP;
+            }
+        }
+    }
+
+    void InitializeHealthBars()
+    {
+        UpdateHealthBar(playerMatrixHPBar, playerUnit?.matrixHP ?? 0, playerMaxHPs[ModuleSlot.Matrix]);
+        UpdateHealthBar(playerRightArmHPBar, playerUnit?.partStatuses[ModuleSlot.RightArm]?.currentHP ?? 0, playerMaxHPs[ModuleSlot.RightArm]);
+        UpdateHealthBar(playerLeftArmHPBar, playerUnit?.partStatuses[ModuleSlot.LeftArm]?.currentHP ?? 0, playerMaxHPs[ModuleSlot.LeftArm]);
+        UpdateHealthBar(playerLowerBodyHPBar, playerUnit?.partStatuses[ModuleSlot.LowerBody]?.currentHP ?? 0, playerMaxHPs[ModuleSlot.LowerBody]);
+        UpdateHealthBar(enemyMatrixHPBar, enemyUnit?.matrixHP ?? 0, enemyMaxHPs[ModuleSlot.Matrix]);
+        UpdateHealthBar(enemyRightArmHPBar, enemyUnit?.partStatuses[ModuleSlot.RightArm]?.currentHP ?? 0, enemyMaxHPs[ModuleSlot.RightArm]);
+        UpdateHealthBar(enemyLeftArmHPBar, enemyUnit?.partStatuses[ModuleSlot.LeftArm]?.currentHP ?? 0, enemyMaxHPs[ModuleSlot.LeftArm]);
+        UpdateHealthBar(enemyLowerBodyHPBar, enemyUnit?.partStatuses[ModuleSlot.LowerBody]?.currentHP ?? 0, enemyMaxHPs[ModuleSlot.LowerBody]);
+    }
+
+    void UpdateHealthBar(Slider bar, int currentHP, int maxHP)
+    {
+        if (bar != null)
+        {
+            bar.maxValue = maxHP;
+            bar.value = Mathf.Max(0, currentHP);
+            if (bar.fillRect != null)
+            {
+                Image fillImage = bar.fillRect.GetComponent<Image>();
+                fillImage.color = Color.Lerp(Color.red, Color.green, (float)currentHP / maxHP);
+            }
+        }
     }
 
     void RenderActionButtons()
@@ -43,6 +102,9 @@ public class GameController : MonoBehaviour
         ClearButtonListeners();
         if (currentState == BattleState.SelectingAttack)
         {
+            turnCounter++;
+            combatlogText.text += $"Turn {turnCounter}\n";
+            ScrollToBottom();
             int buttonIndex = 0;
             if (playerUnit != null && playerUnit.modules != null)
             {
@@ -79,7 +141,7 @@ public class GameController : MonoBehaviour
     {
         if (playerUnit == null || playerUnit.IsPartBroken(sourceSlot))
         {
-            combatlogText.text += $"❌ {sourceSlot} is broken or playerUnit is null.\n";
+            combatlogText.text += $"{sourceSlot} is broken!\n";
             ScrollToBottom();
             return;
         }
@@ -118,22 +180,31 @@ public class GameController : MonoBehaviour
     {
         if (targetSlot == ModuleSlot.Matrix && !(enemyUnit?.CanAttackMatrix() ?? false))
         {
-            combatlogText.text += $"❌ Matrix can only be targeted after destroying an arm!\n";
+            combatlogText.text += "Matrix locked!\n";
             ScrollToBottom();
             return;
         }
 
         int damage = CalculateDamage(selectedAttack, playerUnit, enemyUnit, targetSlot);
+        int maxHP = enemyMaxHPs.ContainsKey(targetSlot) ? enemyMaxHPs[targetSlot] : 1;
+        float damagePercent = (damage / (float)maxHP) * 100f;
+        int prevHP = GetCurrentHP(enemyUnit, targetSlot);
         ApplyDamage(enemyUnit, targetSlot, damage);
-        ApplyEffect(playerUnit, targetSlot, selectedAttack, true); // Apply to attacker
+        int newHP = GetCurrentHP(enemyUnit, targetSlot);
+        ApplyEffect(playerUnit, targetSlot, selectedAttack, true);
+        UpdateHealthBars(enemyUnit, targetSlot, newHP);
 
-        combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} used {selectedAttack?.attackName ?? "No Attack"} on {targetSlot}!\n";
-        if (damage > 0) combatlogText.text += $"◀ {enemyUnit?.Name ?? "Enemy"} took {damage} damage.\n";
+        string attackerName = playerUnit?.Name ?? "Player";
+        string defenderName = enemyUnit?.Name ?? "Enemy";
+        combatlogText.text += $"{attackerName} used {selectedAttack?.attackName ?? "Attack"} on {defenderName}'s {targetSlot}.\n";
+        if (damage > 0) combatlogText.text += $"It dealt {damage} damage ({damagePercent:F1}%).\n";
+        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {targetSlot} was destroyed!\n";
         ScrollToBottom();
 
         if (enemyUnit?.matrixHP <= 0)
         {
-            combatlogText.text += $"🏁 {enemyUnit?.Name ?? "Enemy"} has been destroyed!\n";
+            combatlogText.text += $"\n{defenderName}'s Matrix was destroyed!\n{attackerName} wins!\n";
+            currentState = BattleState.Victory;
             EndBattle();
         }
         else
@@ -153,7 +224,8 @@ public class GameController : MonoBehaviour
 
         if (validModules.Count == 0)
         {
-            combatlogText.text += $"🏁 {enemyUnit.Name} can no longer attack. Victory!\n";
+            combatlogText.text += $"\n{enemyUnit.Name} can no longer fight!\n{playerUnit?.Name ?? "Player"} wins!\n";
+            currentState = BattleState.Victory;
             EndBattle();
             return;
         }
@@ -165,23 +237,41 @@ public class GameController : MonoBehaviour
             target = ModuleSlot.LowerBody;
 
         int damage = CalculateDamage(attack, enemyUnit, playerUnit, target);
+        int maxHP = playerMaxHPs.ContainsKey(target) ? playerMaxHPs[target] : 1;
+        float damagePercent = (damage / (float)maxHP) * 100f;
+        int prevHP = GetCurrentHP(playerUnit, target);
         ApplyDamage(playerUnit, target, damage);
-        ApplyEffect(enemyUnit, target, attack, true); // Apply to attacker
+        int newHP = GetCurrentHP(playerUnit, target);
+        ApplyEffect(enemyUnit, target, attack, true);
+        UpdateHealthBars(playerUnit, target, newHP);
 
-        combatlogText.text += $"◀ {enemyUnit.Name} used {attack.attackName} on {target}!\n";
-        if (damage > 0) combatlogText.text += $"▶ {playerUnit?.Name ?? "Player"} took {damage} damage.\n";
+        string attackerName = enemyUnit.Name;
+        string defenderName = playerUnit?.Name ?? "Player";
+        combatlogText.text += $"{attackerName} used {attack.attackName} on {defenderName}'s {target}.\n";
+        if (damage > 0) combatlogText.text += $"It dealt {damage} damage ({damagePercent:F1}%).\n";
+        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {target} was destroyed!\n";
         ScrollToBottom();
 
         if (playerUnit?.matrixHP <= 0)
         {
-            combatlogText.text += $"🏁 {playerUnit?.Name ?? "Player"} has been destroyed!\n";
+            combatlogText.text += $"\n{defenderName}'s Matrix was destroyed!\n{attackerName} wins!\n";
+            currentState = BattleState.Defeat;
             EndBattle();
         }
         else
         {
+            combatlogText.text += "\n";
+            ScrollToBottom();
             currentState = BattleState.SelectingAttack;
             RenderActionButtons();
         }
+    }
+
+    int GetCurrentHP(MechUnit unit, ModuleSlot slot)
+    {
+        if (unit == null) return 0;
+        if (slot == ModuleSlot.Matrix) return unit.matrixHP;
+        return unit.partStatuses.ContainsKey(slot) ? unit.partStatuses[slot].currentHP : 0;
     }
 
     void ApplyDamage(MechUnit unit, ModuleSlot slot, int damage)
@@ -209,7 +299,7 @@ public class GameController : MonoBehaviour
                 {
                     string valueStr = effectParts[0].Replace("+", "").Replace("-", "");
                     int value = int.Parse(valueStr);
-                    string stat = effectParts[1].Split(' ')[0].ToLower(); // e.g., "DEF", "HP", "Evasion"
+                    string stat = effectParts[1].Split(' ')[0].ToUpper();
                     bool isBuff = effect.StartsWith("+");
 
                     MechBattle.TargetType moveTargetType = part.moves[0].targetType;
@@ -220,22 +310,9 @@ public class GameController : MonoBehaviour
                     if (attacker.partStatuses.ContainsKey(effectTarget))
                     {
                         var status = attacker.partStatuses[effectTarget];
-                        if (isBuff)
-                        {
-                            if (stat == "def" || stat == "hp" || stat == "evasion" || stat == "spd")
-                            {
-                                status.buffs[stat.ToUpper()] = value;
-                                combatlogText.text += $"▶ {attacker.Name} gained +{value} {stat.ToUpper()} on {effectTarget}.\n";
-                            }
-                        }
-                        else
-                        {
-                            if (stat == "def" || stat == "hp" || stat == "evasion" || stat == "spd")
-                            {
-                                status.buffs[stat.ToUpper()] = -value;
-                                combatlogText.text += $"▶ {attacker.Name} lost {value} {stat.ToUpper()} on {effectTarget}.\n";
-                            }
-                        }
+                        status.buffs[stat] = isBuff ? value : -value;
+                        string change = isBuff ? "rose" : "fell";
+                        combatlogText.text += $"{attacker.Name}'s {effectTarget} {stat} {change} by {value}!\n";
                         ScrollToBottom();
                     }
                 }
@@ -281,6 +358,24 @@ public class GameController : MonoBehaviour
         var options = new List<ModuleSlot> { ModuleSlot.RightArm, ModuleSlot.LeftArm, ModuleSlot.LowerBody };
         if (unit.CanAttackMatrix()) options.Add(ModuleSlot.Matrix);
         return options[Random.Range(0, options.Count)];
+    }
+
+    void UpdateHealthBars(MechUnit unit, ModuleSlot slot, int newHP)
+    {
+        if (unit == playerUnit)
+        {
+            if (slot == ModuleSlot.Matrix) UpdateHealthBar(playerMatrixHPBar, newHP, playerMaxHPs[ModuleSlot.Matrix]);
+            else if (slot == ModuleSlot.RightArm) UpdateHealthBar(playerRightArmHPBar, newHP, playerMaxHPs[ModuleSlot.RightArm]);
+            else if (slot == ModuleSlot.LeftArm) UpdateHealthBar(playerLeftArmHPBar, newHP, playerMaxHPs[ModuleSlot.LeftArm]);
+            else if (slot == ModuleSlot.LowerBody) UpdateHealthBar(playerLowerBodyHPBar, newHP, playerMaxHPs[ModuleSlot.LowerBody]);
+        }
+        else if (unit == enemyUnit)
+        {
+            if (slot == ModuleSlot.Matrix) UpdateHealthBar(enemyMatrixHPBar, newHP, enemyMaxHPs[ModuleSlot.Matrix]);
+            else if (slot == ModuleSlot.RightArm) UpdateHealthBar(enemyRightArmHPBar, newHP, enemyMaxHPs[ModuleSlot.RightArm]);
+            else if (slot == ModuleSlot.LeftArm) UpdateHealthBar(enemyLeftArmHPBar, newHP, enemyMaxHPs[ModuleSlot.LeftArm]);
+            else if (slot == ModuleSlot.LowerBody) UpdateHealthBar(enemyLowerBodyHPBar, newHP, enemyMaxHPs[ModuleSlot.LowerBody]);
+        }
     }
 
     void DisableAllButtons()
