@@ -45,6 +45,7 @@ public class GameController : MonoBehaviour
     {
         InitializeMaxHPs();
         InitializeHealthBars();
+        DisableSliderInteractabilityAndHandles();
         combatlogText.text = "Battle start!\n";
         combatlogText.text += $"{playerUnit?.Name ?? "Player"} vs {enemyUnit?.Name ?? "Enemy"}!\n\n";
         ScrollToBottom();
@@ -83,6 +84,30 @@ public class GameController : MonoBehaviour
         UpdateHealthBar(enemyLowerBodyHPBar, enemyUnit?.partStatuses[ModuleSlot.LowerBody]?.currentHP ?? 0, enemyMaxHPs[ModuleSlot.LowerBody]);
     }
 
+    void DisableSliderInteractabilityAndHandles()
+    {
+        DisableSlider(playerMatrixHPBar);
+        DisableSlider(playerRightArmHPBar);
+        DisableSlider(playerLeftArmHPBar);
+        DisableSlider(playerLowerBodyHPBar);
+        DisableSlider(enemyMatrixHPBar);
+        DisableSlider(enemyRightArmHPBar);
+        DisableSlider(enemyLeftArmHPBar);
+        DisableSlider(enemyLowerBodyHPBar);
+    }
+
+    void DisableSlider(Slider slider)
+    {
+        if (slider != null)
+        {
+            slider.interactable = false; // Desativa interação com mouse
+            if (slider.handleRect != null)
+            {
+                slider.handleRect.gameObject.SetActive(false); // Esconde o handle (pontinho)
+            }
+        }
+    }
+
     void UpdateHealthBar(Slider bar, int currentHP, int maxHP)
     {
         if (bar != null)
@@ -93,6 +118,10 @@ public class GameController : MonoBehaviour
             {
                 Image fillImage = bar.fillRect.GetComponent<Image>();
                 fillImage.color = Color.Lerp(Color.red, Color.green, (float)currentHP / maxHP);
+                if (currentHP <= 0)
+                {
+                    fillImage.color = Color.gray; // Cinza para indicar "inoperante"
+                }
             }
         }
     }
@@ -198,7 +227,7 @@ public class GameController : MonoBehaviour
         string defenderName = enemyUnit?.Name ?? "Enemy";
         combatlogText.text += $"{attackerName} used {selectedAttack?.attackName ?? "Attack"} on {defenderName}'s {targetSlot}.\n";
         if (damage > 0) combatlogText.text += $"It dealt {damage} damage ({damagePercent:F1}%).\n";
-        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {targetSlot} was destroyed!\n";
+        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {targetSlot} is no longer combat-ready!\n";
         ScrollToBottom();
 
         if (enemyUnit?.matrixHP <= 0)
@@ -249,7 +278,7 @@ public class GameController : MonoBehaviour
         string defenderName = playerUnit?.Name ?? "Player";
         combatlogText.text += $"{attackerName} used {attack.attackName} on {defenderName}'s {target}.\n";
         if (damage > 0) combatlogText.text += $"It dealt {damage} damage ({damagePercent:F1}%).\n";
-        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {target} was destroyed!\n";
+        if (newHP == 0 && prevHP > 0) combatlogText.text += $"{defenderName}'s {target} is no longer combat-ready!\n";
         ScrollToBottom();
 
         if (playerUnit?.matrixHP <= 0)
