@@ -1972,6 +1972,8 @@ GameObject:
   m_Component:
   - component: {fileID: 773298494}
   - component: {fileID: 773298495}
+  - component: {fileID: 773298497}
+  - component: {fileID: 773298496}
   m_Layer: 0
   m_Name: GameController
   m_TagString: Untagged
@@ -2006,6 +2008,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f91365c1b9f2b4c43b8feb68a8ae76fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerMechObject: {fileID: 1407266290}
+  enemyMechObject: {fileID: 221124140}
+--- !u!114 &773298496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773298492}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab14c793aae9365489a0339ec077ac93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerUnit:
+    Name: 
+    chassis: {fileID: 11400000, guid: 62f1a16939bd018459e595c5a23bac3f, type: 2}
+    matrixHP: 0
+  enemyUnit:
+    Name: 
+    chassis: {fileID: 0}
+    matrixHP: 0
+--- !u!114 &773298497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773298492}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7444f27f632d4534d94824bb91f91866, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   combatlogText: {fileID: 2138476142}
   actionButtons:
   - {fileID: 2135419332}
@@ -2021,8 +2057,6 @@ MonoBehaviour:
   enemyRightArmHPBar: {fileID: 1007037517}
   enemyLeftArmHPBar: {fileID: 1093221979}
   enemyLowerBodyHPBar: {fileID: 348754007}
-  playerMechObject: {fileID: 1407266290}
-  enemyMechObject: {fileID: 221124140}
 --- !u!1 &784203645
 GameObject:
   m_ObjectHideFlags: 0

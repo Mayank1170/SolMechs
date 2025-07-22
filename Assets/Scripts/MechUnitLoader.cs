@@ -5,7 +5,7 @@ using MechBattle;
 public class MechUnitLoader : MonoBehaviour
 {
     [Header("Assign Mech Parts")]
-    public MechBattle.Matrix matrix;
+    public Matrix matrix;
     public MechPart rightArm;
     public MechPart leftArm;
     public MechPart lower;
@@ -22,9 +22,7 @@ public class MechUnitLoader : MonoBehaviour
         {
             Name = matrix.matrixName,
             chassis = matrix,
-            matrixHP = matrix.baseStats?.HP ?? 100,
-            modules = new Dictionary<ModuleSlot, ModuleData>(),
-            partStatuses = new Dictionary<ModuleSlot, PartStatus>()
+            matrixHP = matrix.baseStats?.HP ?? 100 // Consider making configurable
         };
 
         unit.modules[ModuleSlot.RightArm] = rightArm.ToModuleData(ModuleSlot.RightArm);
@@ -33,19 +31,19 @@ public class MechUnitLoader : MonoBehaviour
 
         unit.partStatuses[ModuleSlot.RightArm] = new PartStatus
         {
-            partName = "Right Arm",
+            partName = rightArm.partName,
             maxHP = rightArm.statModifiers?.HP ?? 50,
             currentHP = rightArm.statModifiers?.HP ?? 50
         };
         unit.partStatuses[ModuleSlot.LeftArm] = new PartStatus
         {
-            partName = "Left Arm",
+            partName = leftArm.partName,
             maxHP = leftArm.statModifiers?.HP ?? 50,
             currentHP = leftArm.statModifiers?.HP ?? 50
         };
         unit.partStatuses[ModuleSlot.LowerBody] = new PartStatus
         {
-            partName = "Lower Body",
+            partName = lower.partName,
             maxHP = lower.statModifiers?.HP ?? 50,
             currentHP = lower.statModifiers?.HP ?? 50
         };
