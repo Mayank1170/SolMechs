@@ -27,7 +27,7 @@ MonoBehaviour:
     baseDamage: 0
     damageType: 
     targetType: 1
-    effect: +15 DEF (1 turn)
+    effect: +DEF
   rawData: 'partCode: IN01
 
     partName: Titan Treads

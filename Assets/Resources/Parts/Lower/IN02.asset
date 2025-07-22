@@ -27,7 +27,7 @@ MonoBehaviour:
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +10 Evasion (1 turn)
+    effect: +ATK
   rawData: 'partCode: IN02
 
     partName: Specter Veil

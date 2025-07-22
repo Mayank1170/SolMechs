@@ -15,7 +15,7 @@ MonoBehaviour:
   matrixCode: M01
   matrixName: Titan
   baseStats:
-    HP: 130
+    HP: 260
     ATK: 40
     DEF: 60
     ENG: 40

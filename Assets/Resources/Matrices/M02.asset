@@ -15,7 +15,7 @@ MonoBehaviour:
   matrixCode: M02
   matrixName: Specter
   baseStats:
-    HP: 90
+    HP: 180
     ATK: 40
     DEF: 30
     ENG: 40

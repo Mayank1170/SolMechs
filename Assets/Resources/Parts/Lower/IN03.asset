@@ -27,7 +27,7 @@ MonoBehaviour:
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +15 SPD (1 turn)
+    effect: +SPD
   rawData: 'partCode: IN03
 
     partName: Arclight Thrusters

@@ -15,7 +15,7 @@ MonoBehaviour:
   matrixCode: M04
   matrixName: HeartCore
   baseStats:
-    HP: 120
+    HP: 240
     ATK: 30
     DEF: 40
     ENG: 50

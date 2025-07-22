@@ -27,7 +27,7 @@ MonoBehaviour:
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +30 HP
+    effect: +30HP
   rawData: 'partCode: LA04
 
     partName: HeartCore Patch

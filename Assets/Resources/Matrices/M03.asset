@@ -15,7 +15,7 @@ MonoBehaviour:
   matrixCode: M03
   matrixName: Arclight
   baseStats:
-    HP: 90
+    HP: 180
     ATK: 40
     DEF: 20
     ENG: 80

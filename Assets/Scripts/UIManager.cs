@@ -145,31 +145,51 @@ public class UIManager : MonoBehaviour
             actionButtons[i].gameObject.SetActive(false);
     }
 
-    public void RenderTargetButtons(MechUnit enemyUnit, System.Action<ModuleSlot> onTargetSelected)
+    public void RenderSelfTargetButtons(MechUnit userUnit, System.Action<ModuleSlot> onTargetSelected)
     {
         ClearButtonListeners();
-        var targets = new List<(string name, ModuleSlot slot)>
-        {
-            ("Opponent's Right Arm", ModuleSlot.RightArm),
-            ("Opponent's Left Arm", ModuleSlot.LeftArm),
-            ("Opponent's Lower Body", ModuleSlot.LowerBody)
-        };
-        if (enemyUnit?.CanAttackMatrix() ?? false)
-            targets.Add(("Opponent's Matrix", ModuleSlot.Matrix));
-
         int buttonIndex = 0;
-        for (int i = 0; i < targets.Count && buttonIndex < actionButtons.Length; i++)
+        var slots = new List<ModuleSlot> { ModuleSlot.RightArm, ModuleSlot.LeftArm, ModuleSlot.LowerBody, ModuleSlot.Matrix };
+
+        foreach (var slot in slots)
         {
+            if (slot != ModuleSlot.Matrix && userUnit.IsPartBroken(slot)) continue;
+            if (buttonIndex >= actionButtons.Length) break;
+
             var btn = actionButtons[buttonIndex];
             btn.gameObject.SetActive(true);
             btn.interactable = true;
-            btn.GetComponentInChildren<Text>().text = targets[i].name;
-
-            ModuleSlot capturedSlot = targets[i].slot;
+            btn.GetComponentInChildren<Text>().text = $"My {slot}";
+            ModuleSlot capturedSlot = slot;
             btn.onClick.AddListener(() => onTargetSelected(capturedSlot));
-
             buttonIndex++;
         }
+
+        for (int i = buttonIndex; i < actionButtons.Length; i++)
+            actionButtons[i].gameObject.SetActive(false);
+    }
+
+    public void RenderTargetButtons(MechUnit targetUnit, System.Action<ModuleSlot> onTargetSelected)
+    {
+        ClearButtonListeners();
+        int buttonIndex = 0;
+        var slots = new List<ModuleSlot> { ModuleSlot.RightArm, ModuleSlot.LeftArm, ModuleSlot.LowerBody };
+        if (targetUnit.CanAttackMatrix()) slots.Add(ModuleSlot.Matrix);
+
+        foreach (var slot in slots)
+        {
+            if (slot != ModuleSlot.Matrix && targetUnit.IsPartBroken(slot)) continue;
+            if (buttonIndex >= actionButtons.Length) break;
+
+            var btn = actionButtons[buttonIndex];
+            btn.gameObject.SetActive(true);
+            btn.interactable = true;
+            btn.GetComponentInChildren<Text>().text = $"Opponent's {slot}";
+            ModuleSlot capturedSlot = slot;
+            btn.onClick.AddListener(() => onTargetSelected(capturedSlot));
+            buttonIndex++;
+        }
+
         for (int i = buttonIndex; i < actionButtons.Length; i++)
             actionButtons[i].gameObject.SetActive(false);
     }
@@ -188,18 +208,13 @@ public class UIManager : MonoBehaviour
 
     public void ClearButtonListeners()
     {
-        if (actionButtons == null) return;
         foreach (var btn in actionButtons)
-        {
-            if (btn != null)
-                btn.onClick.RemoveAllListeners();
-        }
+            btn.onClick.RemoveAllListeners();
     }
 
     public void DisableAllButtons()
     {
         foreach (var btn in actionButtons)
-            if (btn != null)
-                btn.interactable = false;
+            btn.interactable = false;
     }
 }

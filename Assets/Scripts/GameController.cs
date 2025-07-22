@@ -23,6 +23,7 @@ public class GameController : MonoBehaviour
         }
         battleManager.Initialize(player, enemy, uiManager);
         uiManager.InitializeHealthBars(player, enemy, battleManager.playerMaxHPs, battleManager.enemyMaxHPs);
+        uiManager.DisableSliderInteractabilityAndHandles();
     }
 
     void Start()
