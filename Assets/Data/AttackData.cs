@@ -1,5 +1,4 @@
 using UnityEngine;
-using MechBattle;
 
 namespace MechBattle
 {
@@ -10,5 +9,6 @@ namespace MechBattle
         public int damage;
         public string type;
         public MechBattle.TargetType target;
+        public string effect; // Adicionado
     }
 }

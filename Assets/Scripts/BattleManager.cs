@@ -64,8 +64,7 @@ public class BattleManager : MonoBehaviour
 
         selectedAttack = attack;
         selectedSourceSlot = sourceSlot;
-        MechPart part = FindMechPartByAttack(playerUnit, attack);
-        bool isSelfTarget = part != null && part.moves != null && part.moves.Count > 0 && part.moves[0].targetType == MechBattle.TargetType.Self;
+        bool isSelfTarget = attack.target == MechBattle.TargetType.Self;
 
         if (isSelfTarget)
         {
@@ -155,8 +154,7 @@ public class BattleManager : MonoBehaviour
 
         var chosenSlot = validModules[Random.Range(0, validModules.Count)];
         var attack = enemyUnit.modules[chosenSlot].attack;
-        MechPart part = FindMechPartByAttack(enemyUnit, attack);
-        bool isSelfTarget = part != null && part.moves != null && part.moves.Count > 0 && part.moves[0].targetType == MechBattle.TargetType.Self;
+        bool isSelfTarget = attack.target == MechBattle.TargetType.Self;
 
         if (isSelfTarget)
         {
@@ -311,7 +309,7 @@ public class BattleManager : MonoBehaviour
         foreach (var kvp in unit.modules)
         {
             if (kvp.Value.attack != null && kvp.Value.attack.attackName == attack.attackName)
-                return Resources.Load<MechPart>($"Parts/{kvp.Value.slot.ToString()}/{kvp.Key.ToString()}");
+                return Resources.Load<MechPart>($"Parts/{kvp.Value.slot.ToString()}/{kvp.Value.partCode}");
         }
         return null;
     }

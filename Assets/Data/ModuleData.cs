@@ -1,5 +1,5 @@
 using UnityEngine;
-using MechBattle;
+using System.Collections.Generic;
 
 namespace MechBattle
 {
@@ -12,5 +12,6 @@ namespace MechBattle
         public int ENG;
         public int SPD;
         public AttackData attack;
+        public string partCode; // Adicionado para carregar o MechPart corretamente
     }
 }

@@ -23,11 +23,11 @@ MonoBehaviour:
     SYS: 0
     PROC: 0
   moves:
-  - moveName: Ground Fortify
+  - moveName: Fortify
     baseDamage: 0
     damageType: 
     targetType: 1
-    effect: +DEF
+    effect: +1 DEF
   rawData: 'partCode: IN01
 
     partName: Titan Treads

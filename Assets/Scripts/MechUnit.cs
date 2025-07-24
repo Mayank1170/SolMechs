@@ -11,6 +11,7 @@ namespace MechBattle
         public int matrixHP;
         public Dictionary<ModuleSlot, ModuleData> modules = new();
         public Dictionary<ModuleSlot, PartStatus> partStatuses = new();
+        public Dictionary<ModuleSlot, int> cooldowns = new();
 
         public bool IsPartBroken(ModuleSlot slot)
         {
@@ -36,17 +37,8 @@ namespace MechBattle
             if (partStatuses.ContainsKey(slot))
             {
                 partStatuses[slot].buffs.Clear();
+                partStatuses[slot].statusDurations.Clear();
             }
         }
-    }
-
-    [System.Serializable]
-    public class PartStatus
-    {
-        public string partName;
-        public int maxHP;
-        public int currentHP;
-        public Dictionary<string, int> buffs = new Dictionary<string, int>(); // Stages (e.g., "DEF": 1 for +1 DEF stage)
-        public bool IsDestroyed => currentHP <= 0;
     }
 }

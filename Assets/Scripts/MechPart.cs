@@ -28,12 +28,13 @@ namespace MechBattle
                 ATK = statModifiers.ATK,
                 ENG = statModifiers.ENG,
                 SPD = statModifiers.SPD,
+                partCode = partCode, // Adicionado
                 attack = new AttackData
                 {
                     attackName = moves[0].moveName,
                     damage = moves[0].baseDamage,
                     type = moves[0].damageType ?? "Physical",
-                    target = (TargetType)moves[0].targetType // Cast MechBattle.TargetType to the expected TargetType
+                    target = (TargetType)moves[0].targetType
                 }
             };
         }
@@ -45,7 +46,7 @@ namespace MechBattle
         public string moveName;
         public int baseDamage;
         public string damageType = "Physical";
-        public TargetType targetType = TargetType.Single; // Defined within MechBattle
+        public TargetType targetType = TargetType.Single;
         public string effect;
     }
 
