@@ -19,15 +19,15 @@ MonoBehaviour:
     ATK: 0
     DEF: 5
     ENG: 25
-    SPD: 0
-    SYS: 0
+    SPD: 10
+    SYS: 5
     PROC: 0
   moves:
   - moveName: System Reboot
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +HP
+    effect: +1 SYS
   rawData: 'partCode: IN04
 
     partName: HeartCore Stabilizer

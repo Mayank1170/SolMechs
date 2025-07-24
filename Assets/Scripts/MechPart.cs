@@ -34,7 +34,8 @@ namespace MechBattle
                     attackName = moves[0].moveName,
                     damage = moves[0].baseDamage,
                     type = moves[0].damageType ?? "Physical",
-                    target = (TargetType)moves[0].targetType
+                    target = (TargetType)moves[0].targetType,
+                    effect = moves[0].effect // ✅ Esta linha resolve seu problema!
                 }
             };
         }

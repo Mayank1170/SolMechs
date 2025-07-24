@@ -19,15 +19,15 @@ MonoBehaviour:
     ATK: 0
     DEF: 5
     ENG: 20
-    SPD: 5
-    SYS: 0
+    SPD: 20
+    SYS: 5
     PROC: 0
   moves:
   - moveName: Phase Drift
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +ATK
+    effect: +1 ATK
   rawData: 'partCode: IN02
 
     partName: Specter Veil

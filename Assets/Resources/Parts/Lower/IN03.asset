@@ -19,15 +19,15 @@ MonoBehaviour:
     ATK: 0
     DEF: 5
     ENG: 20
-    SPD: 15
-    SYS: 0
+    SPD: 20
+    SYS: 5
     PROC: 0
   moves:
-  - moveName: Energy Dash
+  - moveName: Tactical Positioning
     baseDamage: 0
     damageType: Energy
     targetType: 1
-    effect: +SPD
+    effect: +1 ENG
   rawData: 'partCode: IN03
 
     partName: Arclight Thrusters

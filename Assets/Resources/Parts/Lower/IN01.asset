@@ -17,28 +17,15 @@ MonoBehaviour:
   statModifiers:
     HP: 140
     ATK: 0
-    DEF: 0
+    DEF: 10
     ENG: 10
-    SPD: 0
-    SYS: 0
+    SPD: 5
+    SYS: 5
     PROC: 0
   moves:
   - moveName: Fortify
     baseDamage: 0
-    damageType: 
+    damageType: Effect
     targetType: 1
     effect: +1 DEF
-  rawData: 'partCode: IN01
-
-    partName: Titan Treads
-
-    HP: 160
-
-    ATK: 0
-
-    ENG:
-    10
-
-    SPD: 0
-
-    move: Ground Fortify|0|Physical|Self|+15 DEF (1 turn)'
+  rawData: 

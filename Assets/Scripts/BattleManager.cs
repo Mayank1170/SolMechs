@@ -1,6 +1,8 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 using MechBattle;
+using System;
 
 public class BattleManager : MonoBehaviour
 {
@@ -152,7 +154,7 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        var chosenSlot = validModules[Random.Range(0, validModules.Count)];
+        var chosenSlot = validModules[UnityEngine.Random.Range(0, validModules.Count)];
         var attack = enemyUnit.modules[chosenSlot].attack;
         bool isSelfTarget = attack.target == MechBattle.TargetType.Self;
 
@@ -167,7 +169,7 @@ public class BattleManager : MonoBehaviour
                 uiManager.RenderActionButtons(playerUnit, SelectAttack);
                 return;
             }
-            ModuleSlot selfTarget = selfOptions[Random.Range(0, selfOptions.Count)];
+            ModuleSlot selfTarget = selfOptions[UnityEngine.Random.Range(0, selfOptions.Count)];
             uiManager.LogMessage($"{enemyUnit.Name} used {attack.attackName} on itself ({selfTarget}).");
             ApplyEffect(enemyUnit, enemyUnit, selfTarget, attack);
             uiManager.UpdateHealthBars(enemyUnit, selfTarget, GetCurrentHP(enemyUnit, selfTarget), playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
@@ -208,6 +210,9 @@ public class BattleManager : MonoBehaviour
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
 
+    // The rest of the class (ApplyEffect, GetCurrentHP, ApplyDamage, etc.) continues below...
+
+
     private void TriggerEnemyTurn()
     {
         Invoke(nameof(EnemyTurn), 1f);
@@ -241,32 +246,93 @@ public class BattleManager : MonoBehaviour
             uiManager.LogMessage("Effect: No additional effect.");
             return;
         }
+
         MechPart part = FindMechPartByAttack(attacker, attack);
-        if (part == null || part.moves == null || part.moves.Count == 0)
+        MechBattle.MoveDefinition selectedMove = null;
+
+        if (part != null && part.moves != null && part.moves.Count > 0)
         {
-            uiManager.LogMessage("Effect: No additional effect.");
-            return;
+            selectedMove = part.moves.Find(m => m.moveName == attack.attackName);
+            if (selectedMove == null && part.moves.Count == 1)
+            {
+                selectedMove = part.moves[0];
+            }
         }
 
-        string effect = part.moves[0].effect;
+        string effect = selectedMove != null && !string.IsNullOrEmpty(selectedMove.effect)
+            ? selectedMove.effect
+            : attack.effect;
+        Debug.Log($"[DEBUG] Applying effect for attack: '{attack.attackName}' -> effect string: '{effect}'");
+
+
         if (string.IsNullOrEmpty(effect))
         {
             uiManager.LogMessage("Effect: No additional effect.");
             return;
         }
 
+        List<string> effects = new List<string>(effect.Split(';'));
+        foreach (string eff in effects)
+        {
+            ApplySingleEffect(effectUnit, effectSlot, eff.Trim());
+        }
+    }
+
+    private void ApplySingleEffect(MechUnit unit, ModuleSlot slot, string effect, string casterName = "")
+    {
+        if (string.IsNullOrWhiteSpace(effect))
+        {
+            uiManager.LogMessage("Effect: No additional effect.");
+            return;
+        }
+
+        effect = effect.Trim();
+
         if (effect.StartsWith("+") || effect.StartsWith("-"))
         {
             bool isBuff = effect.StartsWith("+");
-            string stat = effect.Substring(1).Trim().ToUpper();
-            int delta = isBuff ? 1 : -1;
-            ApplyBuffStage(effectUnit, effectSlot, stat, delta);
-            string change = isBuff ? "increased" : "decreased";
-            uiManager.LogMessage($"Effect: {effectUnit.Name}'s {effectSlot} {stat} {change} by 1 stage.");
+            string[] parts = effect.Substring(1).Trim().Split(' ');
+
+            int amount = 1;
+            string stat;
+
+            // Handle format like "+DEF"
+            if (parts.Length == 1)
+            {
+                stat = parts[0].ToUpper();
+            }
+            // Handle format like "+2 DEF"
+            else if (parts.Length > 1 && int.TryParse(parts[0], out int parsed))
+            {
+                amount = parsed;
+                stat = parts[1].ToUpper();
+            }
+            else
+            {
+                uiManager.LogMessage("Effect: Unrecognized buff format.");
+                return;
+            }
+
+            int delta = isBuff ? amount : -amount;
+            ApplyBuffStage(unit, slot, stat, delta);
+
+            int finalStage = GetBuffStage(unit, slot, stat);
+            string direction = finalStage > 0 ? "increased" : (finalStage < 0 ? "decreased" : "reset");
+
+            if (direction == "reset")
+                uiManager.LogMessage($"{unit.Name}'s {slot} {stat} was reset to stage 0.");
+            else
+                uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {direction} to stage {finalStage}.");
+
+        }
+
+        if (effect.ToLower().Contains("piercing"))
+        {
+            uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
         }
         else
         {
-            uiManager.LogMessage("Effect: No additional effect.");
+            uiManager.LogMessage("Effect: No recognized effect.");
         }
     }
 
@@ -289,6 +355,17 @@ public class BattleManager : MonoBehaviour
         float effectiveAtk = baseAtk * atkMult;
         float effectiveDef = Mathf.Max(1f, baseDef * defMult);
 
+        MechPart part = FindMechPartByAttack(attacker, attack);
+        if (part != null && part.moves != null && part.moves.Count > 0)
+        {
+            MechBattle.MoveDefinition selectedMove = part.moves.Find(m => m.moveName == attack.attackName);
+            if (selectedMove == null) selectedMove = part.moves[0];
+            if (selectedMove != null && selectedMove.effect.ToLower().Contains("piercing"))
+            {
+                effectiveDef *= 0.5f;
+            }
+        }
+
         float multiplier = effectiveAtk / effectiveDef;
         float baseDamage = attack.damage;
 
@@ -300,7 +377,7 @@ public class BattleManager : MonoBehaviour
         if (unit == null) return ModuleSlot.LowerBody;
         var options = new List<ModuleSlot> { ModuleSlot.RightArm, ModuleSlot.LeftArm, ModuleSlot.LowerBody };
         if (unit.CanAttackMatrix()) options.Add(ModuleSlot.Matrix);
-        return options[Random.Range(0, options.Count)];
+        return options[UnityEngine.Random.Range(0, options.Count)];
     }
 
     private MechPart FindMechPartByAttack(MechUnit unit, AttackData attack)
