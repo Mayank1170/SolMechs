@@ -281,10 +281,7 @@ public class BattleManager : MonoBehaviour
     private void ApplySingleEffect(MechUnit unit, ModuleSlot slot, string effect, string casterName = "")
     {
         if (string.IsNullOrWhiteSpace(effect))
-        {
-            uiManager.LogMessage("Effect: No additional effect.");
             return;
-        }
 
         effect = effect.Trim();
 
@@ -309,7 +306,7 @@ public class BattleManager : MonoBehaviour
             }
             else
             {
-                uiManager.LogMessage("Effect: Unrecognized buff format.");
+                // Unrecognized buff format — silently ignore
                 return;
             }
 
@@ -319,22 +316,19 @@ public class BattleManager : MonoBehaviour
             int finalStage = GetBuffStage(unit, slot, stat);
             string direction = finalStage > 0 ? "increased" : (finalStage < 0 ? "decreased" : "reset");
 
-            if (direction == "reset")
-                uiManager.LogMessage($"{unit.Name}'s {slot} {stat} was reset to stage 0.");
-            else
-                uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {direction} to stage {finalStage}.");
-
+            uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {direction} to stage {finalStage}.");
+            return;
         }
 
         if (effect.ToLower().Contains("piercing"))
         {
             uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
+            return;
         }
-        else
-        {
-            uiManager.LogMessage("Effect: No recognized effect.");
-        }
+
+        // No need to log anything if effect isn't recognized
     }
+
 
     private int CalculateDamage(AttackData attack, MechUnit attacker, MechUnit defender, ModuleSlot targetSlot, ModuleSlot sourceSlot)
     {

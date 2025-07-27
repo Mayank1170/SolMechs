@@ -20,14 +20,14 @@ MonoBehaviour:
     DEF: 30
     ENG: 0
     SPD: 10
-    SYS: 0
+    SYS: 5
     PROC: 0
   moves:
   - moveName: Titan Punch
     baseDamage: 40
     damageType: Physical
     targetType: 0
-    effect: 
+    effect: -1 DEF
   rawData: 'partCode: LA01
 
     partName: Titan Bulwark

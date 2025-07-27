@@ -20,14 +20,14 @@ MonoBehaviour:
     DEF: 5
     ENG: 30
     SPD: 40
-    SYS: 0
+    SYS: 10
     PROC: 0
   moves:
   - moveName: Overdrive Spike
     baseDamage: 40
     damageType: Energy
     targetType: 0
-    effect: 
+    effect: -1 ATK
   rawData: 'partCode: LA03
 
     partName: Arclight Lance

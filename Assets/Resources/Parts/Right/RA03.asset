@@ -23,7 +23,7 @@ MonoBehaviour:
     SYS: 0
     PROC: 0
   moves:
-  - moveName: Pulse Burst
+  - moveName: Arclight Ray
     baseDamage: 55
     damageType: Energy
     targetType: 0

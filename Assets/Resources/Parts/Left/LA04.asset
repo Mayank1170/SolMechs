@@ -13,32 +13,24 @@ MonoBehaviour:
   m_Name: LA04
   m_EditorClassIdentifier: 
   partCode: LA04
-  partName: HeartCore Patch
+  partName: HeartCore Disabler
   statModifiers:
     HP: 100
     ATK: 0
     DEF: 20
     ENG: 20
-    SPD: 20
-    SYS: 0
+    SPD: 0
+    SYS: 20
     PROC: 0
   moves:
+  - moveName: Disable Motors
+    baseDamage: 30
+    damageType: Energy
+    targetType: 0
+    effect: -1 ENG
   - moveName: Nano Repair
     baseDamage: 0
     damageType: Energy
     targetType: 1
     effect: +30HP
-  rawData: 'partCode: LA04
-
-    partName: HeartCore Patch
-
-    HP: 90
-
-    ATK: 0
-
-    ENG:
-    20
-
-    SPD: 5
-
-    move: Nano Repair|0|Energy|Single|+30 HP'
+  rawData: 
