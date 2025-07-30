@@ -2024,7 +2024,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerUnit:
     Name: 
-    chassis: {fileID: 11400000, guid: 62f1a16939bd018459e595c5a23bac3f, type: 2}
+    chassis: {fileID: 0}
     matrixHP: 0
   enemyUnit:
     Name: 
@@ -5868,7 +5868,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 953482669}
   m_HandleRect: {fileID: 953482668}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:

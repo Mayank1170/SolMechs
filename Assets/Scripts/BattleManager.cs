@@ -14,7 +14,8 @@ public class BattleManager : MonoBehaviour
     private Dictionary<MechUnit, Dictionary<string, int>> matrixBuffsDict = new Dictionary<MechUnit, Dictionary<string, int>>();
     private enum BattleState { SelectingAttack, SelectingTarget, SelectingSelfTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState;
-
+  
+    
     public void Initialize(MechUnit player, MechUnit enemy, UIManager ui)
     {
         playerUnit = player;
