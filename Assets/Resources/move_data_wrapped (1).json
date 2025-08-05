@@ -1,0 +1,152 @@
+{
+    "entries": [
+        {
+            "partCode": "BD01",
+            "moves": [
+                {
+                    "moveName": "Disparo Perfurante",
+                    "description": "Ignores 50% DEF",
+                    "baseDamage": 50,
+                    "effect": "Ignores 50% of enemy DEF",
+                    "type": "Physical",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Carga Explosiva",
+                    "description": "Hits all enemy parts",
+                    "baseDamage": 35,
+                    "effect": "AOE damage",
+                    "type": "Physical",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Foco Plasma",
+                    "description": "+20% ATK for 2 turns",
+                    "baseDamage": 0,
+                    "effect": "+20% ATK (2 turns)",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Silenciador Óptico",
+                    "description": "Silences target part for 1 turn",
+                    "baseDamage": 20,
+                    "effect": "Silence (1 turn)",
+                    "type": "Special",
+                    "category": "Ranged"
+                }
+            ]
+        },
+        {
+            "partCode": "BD02",
+            "moves": [
+                {
+                    "moveName": "Pulso Energético",
+                    "description": "Standard energy blast",
+                    "baseDamage": 50,
+                    "effect": "None",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Sobrecarga",
+                    "description": "Reduces PROC by 10",
+                    "baseDamage": 30,
+                    "effect": "-10 PROC (2 turns)",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Onda de Choque",
+                    "description": "Light AOE damage",
+                    "baseDamage": 25,
+                    "effect": "Hits all enemy parts",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Foco Pulsante",
+                    "description": "Boost ENG",
+                    "baseDamage": 0,
+                    "effect": "+20% ENG (2 turns)",
+                    "type": "Special",
+                    "category": "Ranged"
+                }
+            ]
+        },
+        {
+            "partCode": "IN04",
+            "moves": [
+                {
+                    "moveName": "Inverter Fluxo",
+                    "description": "Swap turn order with target",
+                    "baseDamage": 0,
+                    "effect": "Swap turn order",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Reset Posicional",
+                    "description": "Remove all self debuffs",
+                    "baseDamage": 0,
+                    "effect": "Cleansing",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Pulso Velocidade",
+                    "description": "+20 SPD self (2 turns)",
+                    "baseDamage": 0,
+                    "effect": "+20 SPD (2 turns)",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Campo Distúrbio",
+                    "description": "Target has 30% move-fail chance (2 turns)",
+                    "baseDamage": 20,
+                    "effect": "30% move-fail chance",
+                    "type": "Special",
+                    "category": "Ranged"
+                }
+            ]
+        },
+        {
+            "partCode": "BE02",
+            "moves": [
+                {
+                    "moveName": "Sobrecarga Local",
+                    "description": "Stun target part (1 turn)",
+                    "baseDamage": 35,
+                    "effect": "Stun 1 turn",
+                    "type": "Special",
+                    "category": "Contact"
+                },
+                {
+                    "moveName": "Golpe Eletrificado",
+                    "description": "-10 SPD on target (2 turns)",
+                    "baseDamage": 40,
+                    "effect": "-10 SPD (2 turns)",
+                    "type": "Special",
+                    "category": "Contact"
+                },
+                {
+                    "moveName": "Pulso Neural",
+                    "description": "-15 SYS on target (2 turns)",
+                    "baseDamage": 25,
+                    "effect": "-15 SYS (2 turns)",
+                    "type": "Special",
+                    "category": "Ranged"
+                },
+                {
+                    "moveName": "Descarga",
+                    "description": "Light AOE to all parts",
+                    "baseDamage": 20,
+                    "effect": "AOE",
+                    "type": "Special",
+                    "category": "Contact"
+                }
+            ]
+        }
+    ]
+}

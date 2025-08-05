@@ -97,7 +97,7 @@ public class PhotonMenuManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("Scene1"); // Or your game scene
+            PhotonNetwork.LoadLevel("PilotMechBattleV1"); // Or your game scene
         }
     }
 
