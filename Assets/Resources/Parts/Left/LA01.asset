@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: LA01
   m_EditorClassIdentifier: 
   partCode: LA01
-  partName: Titan Bulwark
+  partName: Titan Hands
   statModifiers:
     HP: 100
     ATK: 20
     DEF: 30
-    ENG: 0
+    ENG: 10
     SPD: 10
-    SYS: 5
+    SYS: 10
     PROC: 0
   moves:
   - moveName: Titan Punch

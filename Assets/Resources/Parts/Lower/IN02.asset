@@ -13,32 +13,19 @@ MonoBehaviour:
   m_Name: IN02
   m_EditorClassIdentifier: 
   partCode: IN02
-  partName: Specter Veil
+  partName: Striker Legs
   statModifiers:
-    HP: 90
-    ATK: 0
-    DEF: 5
-    ENG: 20
-    SPD: 20
-    SYS: 5
+    HP: 100
+    ATK: 20
+    DEF: 10
+    ENG: 10
+    SPD: 10
+    SYS: 10
     PROC: 0
   moves:
-  - moveName: Phase Drift
+  - moveName: Focus Aim
     baseDamage: 0
-    damageType: Energy
+    damageType: Physical
     targetType: 1
     effect: +1 ATK
-  rawData: 'partCode: IN02
-
-    partName: Specter Veil
-
-    HP: 120
-
-    ATK: 0
-
-    ENG:
-    20
-
-    SPD: 5
-
-    move: Phase Drift|0|Energy|Self|+10 Evasion (1 turn)'
+  rawData: 

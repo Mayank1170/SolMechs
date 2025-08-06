@@ -13,21 +13,21 @@ MonoBehaviour:
   m_Name: LA02
   m_EditorClassIdentifier: 
   partCode: LA02
-  partName: Specter Sheath
+  partName: Striker Guns
   statModifiers:
     HP: 100
-    ATK: 0
-    DEF: 5
-    ENG: 40
+    ATK: 30
+    DEF: 20
+    ENG: 10
     SPD: 10
     SYS: 10
     PROC: 0
   moves:
-  - moveName: System Hack
-    baseDamage: 35
-    damageType: Energy
+  - moveName: Specter shot
+    baseDamage: 40
+    damageType: Physical
     targetType: 0
-    effect: -1 SYS
+    effect: -1 ATK
   rawData: 'partCode: LA02
 
     partName: Specter Sheath

@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: RA02
   m_EditorClassIdentifier: 
   partCode: RA02
-  partName: Specter Cannon
+  partName: Striker Cannon
   statModifiers:
     HP: 80
-    ATK: 40
-    DEF: 5
+    ATK: 30
+    DEF: 20
     ENG: 10
     SPD: 10
-    SYS: 5
+    SYS: 10
     PROC: 0
   moves:
   - moveName: Piercing Shot

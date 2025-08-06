@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: RA04
   m_EditorClassIdentifier: 
   partCode: RA04
-  partName: HeartCore Shell
+  partName: HeartCore Pulse
   statModifiers:
     HP: 80
-    ATK: 0
+    ATK: 10
     DEF: 10
-    ENG: 20
-    SPD: 5
+    ENG: 30
+    SPD: 10
     SYS: 20
     PROC: 0
   moves:
   - moveName: Pulse Wave
-    baseDamage: 30
+    baseDamage: 50
     damageType: Energy
     targetType: 0
     effect: 

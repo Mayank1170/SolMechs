@@ -16,15 +16,15 @@ MonoBehaviour:
   partName: Arclight Emitter
   statModifiers:
     HP: 80
-    ATK: 0
-    DEF: 5
-    ENG: 40
+    ATK: 10
+    DEF: 10
+    ENG: 30
     SPD: 20
-    SYS: 0
+    SYS: 10
     PROC: 0
   moves:
   - moveName: Arclight Ray
-    baseDamage: 55
+    baseDamage: 65
     damageType: Energy
     targetType: 0
     effect: 

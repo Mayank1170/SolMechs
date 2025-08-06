@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: M02
   m_EditorClassIdentifier: 
   matrixCode: M02
-  matrixName: Specter
+  matrixName: Striker
   baseStats:
     HP: 180
     ATK: 40

@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: IN04
   m_EditorClassIdentifier: 
   partCode: IN04
-  partName: HeartCore Stabilizer
+  partName: HeartCore Legs
   statModifiers:
-    HP: 100
-    ATK: 0
-    DEF: 5
-    ENG: 25
+    HP: 140
+    ATK: 10
+    DEF: 10
+    ENG: 10
     SPD: 10
-    SYS: 5
+    SYS: 10
     PROC: 0
   moves:
   - moveName: System Reboot
@@ -28,17 +28,4 @@ MonoBehaviour:
     damageType: Energy
     targetType: 1
     effect: +1 SYS
-  rawData: 'partCode: IN04
-
-    partName: HeartCore Stabilizer
-
-    HP: 130
-
-    ATK:
-    0
-
-    ENG: 25
-
-    SPD: 0
-
-    move: System Reboot|0|Energy|Self|+15 HP'
+  rawData: 
