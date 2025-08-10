@@ -16,11 +16,11 @@ MonoBehaviour:
   matrixName: Striker
   baseStats:
     HP: 180
-    ATK: 40
-    DEF: 30
-    ENG: 40
-    SPD: 60
-    SYS: 60
-    PROC: 80
-  passive1: Hostile Instinct
-  passive2: Backdoor
+    ATK: 60
+    DEF: 40
+    ENG: 20
+    SPD: 20
+    SYS: 20
+    PROC: 0
+  passive1: 
+  passive2: 
