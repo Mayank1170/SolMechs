@@ -23,7 +23,7 @@ MonoBehaviour:
     SYS: 10
     PROC: 0
   moves:
-  - moveName: Specter shot
+  - moveName: Striker shot
     baseDamage: 40
     damageType: Physical
     targetType: 0

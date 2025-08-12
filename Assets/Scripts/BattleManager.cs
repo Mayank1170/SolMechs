@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System.Collections.Generic;
 using MechBattle;
@@ -6,6 +5,11 @@ using System;
 
 public class BattleManager : MonoBehaviour
 {
+    // NEW: Loaders and optional UI reference
+    public MechUnitLoader playerLoader;
+    public MechUnitLoader enemyLoader;
+    public UIManager ui; // optional; if null we'll FindObjectOfType
+
     public MechUnit playerUnit;
     public MechUnit enemyUnit;
     private AttackData selectedAttack;
@@ -17,11 +21,35 @@ public class BattleManager : MonoBehaviour
     private enum BattleState { SelectingAttack, SelectingTarget, SelectingSelfTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState;
 
-    public void Initialize(MechUnit player, MechUnit enemy, UIManager ui)
+    // Bootstrap
+    private void Start()
+    {
+        uiManager = uiManager != null ? uiManager : (ui != null ? ui : FindObjectOfType<UIManager>());
+
+        if (playerLoader != null) playerUnit = playerLoader.GetUnitData();
+        if (enemyLoader != null) enemyUnit = enemyLoader.GetUnitData();
+
+        if (playerUnit == null || enemyUnit == null || uiManager == null)
+        {
+            Debug.LogError("[BattleManager] Missing units or UIManager. Check loaders/UI references.");
+            return;
+        }
+
+        Initialize(playerUnit, enemyUnit, uiManager);
+        uiManager.DisableSliderInteractabilityAndHandles();
+        uiManager.InitializeHealthBars(playerUnit, enemyUnit, playerMaxHPs, enemyMaxHPs);
+
+        // NEW: set the sprites for both sides from the loaders
+        uiManager.InitializePaperDolls(playerLoader, enemyLoader);
+
+        StartTurn();
+    }
+
+    public void Initialize(MechUnit player, MechUnit enemy, UIManager uiM)
     {
         playerUnit = player;
         enemyUnit = enemy;
-        uiManager = ui;
+        uiManager = uiM;
         matrixBuffsDict[playerUnit] = new Dictionary<string, int>();
         matrixBuffsDict[enemyUnit] = new Dictionary<string, int>();
         InitializeMaxHPs();
@@ -34,17 +62,13 @@ public class BattleManager : MonoBehaviour
         {
             playerMaxHPs[ModuleSlot.Matrix] = playerUnit.matrixHP;
             foreach (var slot in playerUnit.partStatuses.Keys)
-            {
                 playerMaxHPs[slot] = playerUnit.partStatuses[slot].currentHP;
-            }
         }
         if (enemyUnit != null)
         {
             enemyMaxHPs[ModuleSlot.Matrix] = enemyUnit.matrixHP;
             foreach (var slot in enemyUnit.partStatuses.Keys)
-            {
                 enemyMaxHPs[slot] = enemyUnit.partStatuses[slot].currentHP;
-            }
         }
     }
 
@@ -139,7 +163,6 @@ public class BattleManager : MonoBehaviour
     public void EnemyTurn()
     {
         if (currentState != BattleState.EnemyTurn) return;
-
         if (enemyUnit == null) return;
 
         var validModules = new List<ModuleSlot>();
@@ -210,18 +233,8 @@ public class BattleManager : MonoBehaviour
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
 
-    // The rest of the class (ApplyEffect, GetCurrentHP, ApplyDamage, etc.) continues below...
-
-
-    private void TriggerEnemyTurn()
-    {
-        Invoke(nameof(EnemyTurn), 1f);
-    }
-
-    private void EndBattle()
-    {
-        uiManager.DisableAllButtons();
-    }
+    private void TriggerEnemyTurn() { Invoke(nameof(EnemyTurn), 1f); }
+    private void EndBattle() { uiManager.DisableAllButtons(); }
 
     private int GetCurrentHP(MechUnit unit, ModuleSlot slot)
     {
@@ -233,8 +246,7 @@ public class BattleManager : MonoBehaviour
     private void ApplyDamage(MechUnit unit, ModuleSlot slot, int damage)
     {
         if (unit == null) return;
-        if (slot == ModuleSlot.Matrix)
-            unit.matrixHP = Mathf.Max(0, unit.matrixHP - damage);
+        if (slot == ModuleSlot.Matrix) unit.matrixHP = Mathf.Max(0, unit.matrixHP - damage);
         else if (unit.partStatuses.ContainsKey(slot))
             unit.partStatuses[slot].currentHP = Mathf.Max(0, unit.partStatuses[slot].currentHP - damage);
     }
@@ -254,16 +266,12 @@ public class BattleManager : MonoBehaviour
         {
             selectedMove = part.moves.Find(m => m.moveName == attack.attackName);
             if (selectedMove == null && part.moves.Count == 1)
-            {
                 selectedMove = part.moves[0];
-            }
         }
 
         string effect = selectedMove != null && !string.IsNullOrEmpty(selectedMove.effect)
             ? selectedMove.effect
             : attack.effect;
-        Debug.Log($"[DEBUG] Applying effect for attack: '{attack.attackName}' -> effect string: '{effect}'");
-
 
         if (string.IsNullOrEmpty(effect))
         {
@@ -273,49 +281,29 @@ public class BattleManager : MonoBehaviour
 
         List<string> effects = new List<string>(effect.Split(';'));
         foreach (string eff in effects)
-        {
             ApplySingleEffect(effectUnit, effectSlot, eff.Trim());
-        }
     }
 
     private void ApplySingleEffect(MechUnit unit, ModuleSlot slot, string effect, string casterName = "")
     {
-        if (string.IsNullOrWhiteSpace(effect))
-            return;
-
+        if (string.IsNullOrWhiteSpace(effect)) return;
         effect = effect.Trim();
 
         if (effect.StartsWith("+") || effect.StartsWith("-"))
         {
             bool isBuff = effect.StartsWith("+");
             string[] parts = effect.Substring(1).Trim().Split(' ');
+            int amount = 1; string stat;
 
-            int amount = 1;
-            string stat;
-
-            // Handle format like "+DEF"
-            if (parts.Length == 1)
-            {
-                stat = parts[0].ToUpper();
-            }
-            // Handle format like "+2 DEF"
-            else if (parts.Length > 1 && int.TryParse(parts[0], out int parsed))
-            {
-                amount = parsed;
-                stat = parts[1].ToUpper();
-            }
-            else
-            {
-                // Unrecognized buff format — silently ignore
-                return;
-            }
+            if (parts.Length == 1) stat = parts[0].ToUpper();
+            else if (parts.Length > 1 && int.TryParse(parts[0], out int parsed)) { amount = parsed; stat = parts[1].ToUpper(); }
+            else return;
 
             int delta = isBuff ? amount : -amount;
             ApplyBuffStage(unit, slot, stat, delta);
 
             int finalStage = GetBuffStage(unit, slot, stat);
             string direction = finalStage > 0 ? "increased" : (finalStage < 0 ? "decreased" : "reset");
-
             uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {direction} to stage {finalStage}.");
             return;
         }
@@ -325,10 +313,7 @@ public class BattleManager : MonoBehaviour
             uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
             return;
         }
-
-        // No need to log anything if effect isn't recognized
     }
-
 
     private int CalculateDamage(AttackData attack, MechUnit attacker, MechUnit defender, ModuleSlot targetSlot, ModuleSlot sourceSlot)
     {
@@ -355,9 +340,7 @@ public class BattleManager : MonoBehaviour
             MechBattle.MoveDefinition selectedMove = part.moves.Find(m => m.moveName == attack.attackName);
             if (selectedMove == null) selectedMove = part.moves[0];
             if (selectedMove != null && selectedMove.effect.ToLower().Contains("piercing"))
-            {
                 effectiveDef *= 0.5f;
-            }
         }
 
         float multiplier = effectiveAtk / effectiveDef;

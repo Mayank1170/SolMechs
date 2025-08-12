@@ -4,48 +4,102 @@ using MechBattle;
 
 public class MechUnitLoader : MonoBehaviour
 {
-    [Header("Assign Mech Parts")]
+    [Header("Load mode")]
+    [Tooltip("If true, loads the last saved build from BuildService using catalogs. If false, uses the manual ScriptableObject fields below.")]
+    public bool useSavedBuild = true;
+
+    [Header("Catalogs (required when useSavedBuild = true)")]
+    public MatrixCatalog matrixCatalog;
+    public PartCatalog partCatalog;
+
+    [Header("Manual assignment (fallback if no saved build)")]
     public Matrix matrix;
     public MechPart rightArm;
     public MechPart leftArm;
     public MechPart lower;
 
+    // Expose the final assets the loader actually used (for UI sprites).
+    [HideInInspector] public Matrix ResolvedMatrix;
+    [HideInInspector] public MechPart ResolvedRightArm;
+    [HideInInspector] public MechPart ResolvedLeftArm;
+    [HideInInspector] public MechPart ResolvedLower;
+
     public MechUnit GetUnitData()
     {
-        if (matrix == null || rightArm == null || leftArm == null || lower == null)
+        Matrix m = matrix;
+        MechPart ra = rightArm;
+        MechPart la = leftArm;
+        MechPart lb = lower;
+
+        if (useSavedBuild)
         {
-            Debug.LogError($"❌ Missing mech part on {gameObject.name}! Matrix: {matrix?.matrixName ?? "null"}, RightArm: {rightArm?.partName ?? "null"}, LeftArm: {leftArm?.partName ?? "null"}, Lower: {lower?.partName ?? "null"}");
+            if (matrixCatalog != null) matrixCatalog.Init();
+            if (partCatalog != null) partCatalog.Init();
+
+            var saved = BuildService.LoadOrNull();
+            if (saved != null && matrixCatalog != null && partCatalog != null)
+            {
+                var mTry = matrixCatalog.Get(saved.matrixId);
+                var raTry = partCatalog.Get(saved.rightArmId);
+                var laTry = partCatalog.Get(saved.leftArmId);
+                var lbTry = partCatalog.Get(saved.lowerBodyId);
+
+                if (mTry != null) m = mTry;
+                if (raTry != null) ra = raTry;
+                if (laTry != null) la = laTry;
+                if (lbTry != null) lb = lbTry;
+            }
+            else
+            {
+                Debug.LogWarning("[MechUnitLoader] Saved build not found or catalogs missing. Falling back to manual assignment.");
+            }
+        }
+
+        // Cache the actually used assets for other systems (UI).
+        ResolvedMatrix = m;
+        ResolvedRightArm = ra;
+        ResolvedLeftArm = la;
+        ResolvedLower = lb;
+
+        if (m == null || ra == null || la == null || lb == null)
+        {
+            Debug.LogError($"❌ Missing mech part on {gameObject.name}! Matrix: {m?.matrixName ?? "null"}, RightArm: {ra?.partName ?? "null"}, LeftArm: {la?.partName ?? "null"}, Lower: {lb?.partName ?? "null"}");
             return null;
         }
 
         var unit = new MechUnit
         {
-            Name = matrix.matrixName,
-            chassis = matrix,
-            matrixHP = matrix.baseStats?.HP ?? 100 // Consider making configurable
+            Name = m.matrixName,
+            chassis = m,
+            matrixHP = m.baseStats?.HP ?? 100
         };
 
-        unit.modules[ModuleSlot.RightArm] = rightArm.ToModuleData(ModuleSlot.RightArm);
-        unit.modules[ModuleSlot.LeftArm] = leftArm.ToModuleData(ModuleSlot.LeftArm);
-        unit.modules[ModuleSlot.LowerBody] = lower.ToModuleData(ModuleSlot.LowerBody);
+        // Modules
+        unit.modules[ModuleSlot.RightArm] = ra.ToModuleData(ModuleSlot.RightArm);
+        unit.modules[ModuleSlot.LeftArm] = la.ToModuleData(ModuleSlot.LeftArm);
+        unit.modules[ModuleSlot.LowerBody] = lb.ToModuleData(ModuleSlot.LowerBody);
 
+        // Part HP/buffs
         unit.partStatuses[ModuleSlot.RightArm] = new PartStatus
         {
-            partName = rightArm.partName,
-            maxHP = rightArm.statModifiers?.HP ?? 50,
-            currentHP = rightArm.statModifiers?.HP ?? 50
+            partName = ra.partName,
+            maxHP = ra.statModifiers?.HP ?? 50,
+            currentHP = ra.statModifiers?.HP ?? 50,
+            buffs = new Dictionary<string, int>()
         };
         unit.partStatuses[ModuleSlot.LeftArm] = new PartStatus
         {
-            partName = leftArm.partName,
-            maxHP = leftArm.statModifiers?.HP ?? 50,
-            currentHP = leftArm.statModifiers?.HP ?? 50
+            partName = la.partName,
+            maxHP = la.statModifiers?.HP ?? 50,
+            currentHP = la.statModifiers?.HP ?? 50,
+            buffs = new Dictionary<string, int>()
         };
         unit.partStatuses[ModuleSlot.LowerBody] = new PartStatus
         {
-            partName = lower.partName,
-            maxHP = lower.statModifiers?.HP ?? 50,
-            currentHP = lower.statModifiers?.HP ?? 50
+            partName = lb.partName,
+            maxHP = lb.statModifiers?.HP ?? 50,
+            currentHP = lb.statModifiers?.HP ?? 50,
+            buffs = new Dictionary<string, int>()
         };
 
         return unit;
