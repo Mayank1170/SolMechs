@@ -42,3 +42,4 @@ MonoBehaviour:
     SPD: 10
 
     move: Piercing Shot|45|Physical|Single'
+  editorSprite: {fileID: 21300000, guid: 3ac2970a73d788e47b7727d24fabe99b, type: 3}

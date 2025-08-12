@@ -24,3 +24,4 @@ MonoBehaviour:
     PROC: 80
   passive1: Hostile Instinct
   passive2: Backdoor
+  editorSprite: {fileID: 21300000, guid: 2078a12e1ddd1f74180c0aca80872778, type: 3}

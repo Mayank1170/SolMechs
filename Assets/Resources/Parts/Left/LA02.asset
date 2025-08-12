@@ -42,3 +42,4 @@ MonoBehaviour:
     SPD: 5
 
     move: System Leak|35|Energy|Single'
+  editorSprite: {fileID: 21300000, guid: b34b0353733c67a4197bb97b6c3f6f83, type: 3}
