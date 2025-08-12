@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: LA02
   m_EditorClassIdentifier: 
   partCode: LA02
-  partName: Striker Gun
+  partName: Striker Guns
   statModifiers:
     HP: 100
     ATK: 30
@@ -23,7 +23,7 @@ MonoBehaviour:
     SYS: 10
     PROC: 0
   moves:
-  - moveName: Striker shot
+  - moveName: Specter shot
     baseDamage: 40
     damageType: Physical
     targetType: 0

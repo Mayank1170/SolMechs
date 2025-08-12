@@ -18,9 +18,9 @@ MonoBehaviour:
     HP: 180
     ATK: 40
     DEF: 20
-    ENG: 60
-    SPD: 20
-    SYS: 20
-    PROC: 0
-  passive1: 
-  passive2: 
+    ENG: 80
+    SPD: 70
+    SYS: 30
+    PROC: 60
+  passive1: Residual Energy
+  passive2: First Shot

@@ -23,7 +23,7 @@ MonoBehaviour:
     SYS: 10
     PROC: 0
   moves:
-  - moveName: Crushing Claw
+  - moveName: Crush Grip
     baseDamage: 50
     damageType: Physical
     targetType: 0

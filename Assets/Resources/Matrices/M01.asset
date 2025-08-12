@@ -18,9 +18,9 @@ MonoBehaviour:
     HP: 260
     ATK: 40
     DEF: 60
-    ENG: 20
-    SPD: 10
+    ENG: 40
+    SPD: 20
     SYS: 20
-    PROC: 0
-  passive1: 
-  passive2: 
+    PROC: 20
+  passive1: Fortify
+  passive2: Thermal Stability
