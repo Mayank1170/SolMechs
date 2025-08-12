@@ -19,7 +19,7 @@ MonoBehaviour:
     ATK: 40
     DEF: 30
     ENG: 40
-    SPD: 60
+    SPD: 40
     SYS: 60
     PROC: 80
   passive1: Hostile Instinct

@@ -1,6 +1,8 @@
 // EditorController.cs — arrow-based, Unity 2021-safe
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -34,6 +36,9 @@ namespace MechBattle
         [Header("Stats UI (sliders)")]
         public Slider hpBar, atkBar, defBar, engBar, spdBar, sysBar;
 
+        [Header("Stats Value Texts (optional)")]
+        public Text hpValueText, atkValueText, defValueText, engValueText, spdValueText, sysValueText;
+
         [Header("Stat Range Mode")]
         public bool autoConfigureStatMaxFromCatalogs = true;
         public int hpMax = 200, atkMax = 150, defMax = 150, engMax = 150, spdMax = 150, sysMax = 150;
@@ -41,8 +46,13 @@ namespace MechBattle
         [Header("Move Detail Panel")]
         public Text moveNameText, movePartText, moveDamageText, moveTypeText, moveTargetText, moveDescText;
 
-        [Header("Move List (click to select)")]
-        public Button move1Button, move2Button, move3Button; // RA / LA / IN
+        [Header("Move Description Options")]
+        [Tooltip("If true, uses part.rawData as a fallback description when a move has no effect.")]
+        public bool usePartRawDataAsDescFallback = false;
+        [Tooltip("Placeholder to use for labels when no data is available.")]
+        public string emptyMoveLabel = "-";
+        [Tooltip("Text to show as the description when the move has no effect (empty string = show nothing).")]
+        public string emptyMoveDescription = "";
 
         [Header("Navigation (optional)")]
         public Button testBattleButton;
@@ -50,6 +60,20 @@ namespace MechBattle
 
         [Header("Debug")]
         public bool previewPlusOneATKIfNoEffect = false;
+        public bool logStatsOnChange = false;
+
+        // Visual setup — unify non-HP bars, keep HP separate
+        [Header("Stat Bar Visual (HP separate)")]
+        [Tooltip("If true, ATK/DEF/ENG/SYS/SPD share the same visual max; HP has its own.")]
+        public bool unifyNonHPBars = true;
+        [Range(0f, 0.25f)] public float nonHPHeadroom = 0.05f;
+        public int nonHPRoundToMultiple = 10;
+        public int nonHPMinVisualMax = 80;
+
+        [Tooltip("Visual headroom just for the HP bar.")]
+        [Range(0f, 0.25f)] public float hpHeadroom = 0.05f;
+        public int hpRoundToMultiple = 10;
+        public int hpMinVisualMax = 200;
 
         private MechBuild _build;
         private List<Matrix> _matrices = new List<Matrix>();
@@ -58,7 +82,9 @@ namespace MechBattle
         private List<MechPart> _lowers = new List<MechPart>();
 
         private int _iMatrix = 0, _iRA = 0, _iLA = 0, _iIN = 0;
-        private int _selectedMoveIndex = 0; // 0=RA,1=LA,2=IN,-1=none
+
+        // 0 = Right Arm, 1 = Left Arm, 2 = Lower (IN), -1 = none
+        private int _selectedMoveIndex = 0;
 
         private void Awake()
         {
@@ -84,9 +110,10 @@ namespace MechBattle
             RebuildListsForCurrentMatrix();
             SyncIndicesFromBuild();
 
-            ApplyBuildToUI();
-            PreviewSelectedMoveEffect();
+            // First load: build UI and let it auto-select a valid move
+            ApplyBuildToUI(false);
 
+            // Wire arrows
             if (matrixPrevButton) matrixPrevButton.onClick.AddListener(delegate { CycleMatrix(-1); });
             if (matrixNextButton) matrixNextButton.onClick.AddListener(delegate { CycleMatrix(+1); });
             if (rightArmPrevButton) rightArmPrevButton.onClick.AddListener(delegate { CycleRA(-1); });
@@ -97,11 +124,6 @@ namespace MechBattle
             if (lowerNextButton) lowerNextButton.onClick.AddListener(delegate { CycleIN(+1); });
 
             if (saveButton) saveButton.onClick.AddListener(SaveCurrentBuild);
-
-            if (move1Button) move1Button.onClick.AddListener(delegate { OnSelectMove(0); });
-            if (move2Button) move2Button.onClick.AddListener(delegate { OnSelectMove(1); });
-            if (move3Button) move3Button.onClick.AddListener(delegate { OnSelectMove(2); });
-
             if (testBattleButton) testBattleButton.onClick.AddListener(GoToBattleWithCurrentBuild);
         }
 
@@ -113,8 +135,9 @@ namespace MechBattle
 
             RebuildListsForCurrentMatrix();
             SyncIndicesFromBuild();
-            ApplyBuildToUI();
-            PreviewSelectedMoveEffect();
+
+            ApplyBuildToUI(true);
+            OnSelectMove(_selectedMoveIndex);
         }
 
         private void CycleRA(int dir)
@@ -122,8 +145,9 @@ namespace MechBattle
             if (_rightArms.Count == 0) return;
             _iRA = Wrap(_iRA + dir, _rightArms.Count);
             _build.rightArmId = _rightArms[_iRA].partCode;
-            ApplyBuildToUI();
-            PreviewSelectedMoveEffect();
+
+            ApplyBuildToUI(true);
+            OnSelectMove(0);
         }
 
         private void CycleLA(int dir)
@@ -131,8 +155,9 @@ namespace MechBattle
             if (_leftArms.Count == 0) return;
             _iLA = Wrap(_iLA + dir, _leftArms.Count);
             _build.leftArmId = _leftArms[_iLA].partCode;
-            ApplyBuildToUI();
-            PreviewSelectedMoveEffect();
+
+            ApplyBuildToUI(true);
+            OnSelectMove(1);
         }
 
         private void CycleIN(int dir)
@@ -140,8 +165,9 @@ namespace MechBattle
             if (_lowers.Count == 0) return;
             _iIN = Wrap(_iIN + dir, _lowers.Count);
             _build.lowerBodyId = _lowers[_iIN].partCode;
-            ApplyBuildToUI();
-            PreviewSelectedMoveEffect();
+
+            ApplyBuildToUI(true);
+            OnSelectMove(2);
         }
 
         private static int Wrap(int i, int count)
@@ -193,46 +219,49 @@ namespace MechBattle
             if (_lowers.Count > 0) _build.lowerBodyId = _lowers[_iIN].partCode;
         }
 
-        private void ApplyBuildToUI()
+        /// <summary>
+        /// Rebuild labels, paper doll sprites, stat bars, and move panel.
+        /// </summary>
+        private void ApplyBuildToUI(bool preserveSelection)
         {
             Matrix m = matrixCatalog.Get(_build.matrixId);
             MechPart ra = partCatalog.Get(_build.rightArmId);
             MechPart la = partCatalog.Get(_build.leftArmId);
             MechPart lb = partCatalog.Get(_build.lowerBodyId);
 
-            if (matrixLabel) matrixLabel.text = m != null ? (m.matrixCode + " - " + m.matrixName) : "-";
-            if (rightArmLabel) rightArmLabel.text = ra != null ? (ra.partCode + " - " + ra.partName) : "-";
-            if (leftArmLabel) leftArmLabel.text = la != null ? (la.partCode + " - " + la.partName) : "-";
-            if (lowerLabel) lowerLabel.text = lb != null ? (lb.partCode + " - " + lb.partName) : "-";
+            if (matrixLabel) matrixLabel.text = FormatLabel(m != null ? m.matrixCode : null, m != null ? m.matrixName : null);
+            if (rightArmLabel) rightArmLabel.text = FormatLabel(ra != null ? ra.partCode : null, ra != null ? ra.partName : null);
+            if (leftArmLabel) leftArmLabel.text = FormatLabel(la != null ? la.partCode : null, la != null ? la.partName : null);
+            if (lowerLabel) lowerLabel.text = FormatLabel(lb != null ? lb.partCode : null, lb != null ? lb.partName : null);
 
-            if (imgMatrix) imgMatrix.sprite = TryGetSprite(m);
-            if (imgRightArm) imgRightArm.sprite = TryGetSprite(ra);
-            if (imgLeftArm) imgLeftArm.sprite = TryGetSprite(la);
-            if (imgLower) imgLower.sprite = TryGetSprite(lb);
+            SetImage(imgMatrix, TryGetSprite(m));
+            SetImage(imgRightArm, TryGetSprite(ra));
+            SetImage(imgLeftArm, TryGetSprite(la));
+            SetImage(imgLower, TryGetSprite(lb));
 
             StatBlock totals = CalculateCurrentStats();
             UpdateStatBars(totals);
 
-            SetupMoveButtons(ra, la, lb);
-            AutoSelectFirstAvailableMove(ra, la, lb);
+            if (preserveSelection)
+            {
+                if (_selectedMoveIndex == 0 && HasMove(ra)) ShowMoveFrom(ra);
+                else if (_selectedMoveIndex == 1 && HasMove(la)) ShowMoveFrom(la);
+                else if (_selectedMoveIndex == 2 && HasMove(lb)) ShowMoveFrom(lb);
+                else AutoSelectFirstAvailableMove(ra, la, lb);
+            }
+            else
+            {
+                AutoSelectFirstAvailableMove(ra, la, lb);
+            }
+
+            PreviewSelectedMoveEffect();
         }
 
-        private void SetupMoveButtons(MechPart ra, MechPart la, MechPart lb)
+        private string FormatLabel(string code, string name)
         {
-            SetupMoveButton(move1Button, ra, "—");
-            SetupMoveButton(move2Button, la, "—");
-            SetupMoveButton(move3Button, lb, "—");
-            UpdateMoveButtonsInteractable();
-        }
-
-        private void SetupMoveButton(Button btn, MechPart part, string emptyLabel)
-        {
-            if (btn == null) return;
-            Text txt = btn.GetComponentInChildren<Text>();
-            string label = emptyLabel;
-            if (part != null && part.moves != null && part.moves.Count > 0 && !string.IsNullOrEmpty(part.moves[0].moveName))
-                label = part.moves[0].moveName;
-            if (txt != null) txt.text = label;
+            if (!string.IsNullOrEmpty(name)) return name;
+            if (!string.IsNullOrEmpty(code)) return code;
+            return "-";
         }
 
         private void AutoSelectFirstAvailableMove(MechPart ra, MechPart la, MechPart lb)
@@ -241,8 +270,7 @@ namespace MechBattle
             if (HasMove(la)) { _selectedMoveIndex = 1; ShowMoveFrom(la); PreviewSelectedMoveEffect(); return; }
             if (HasMove(lb)) { _selectedMoveIndex = 2; ShowMoveFrom(lb); PreviewSelectedMoveEffect(); return; }
             _selectedMoveIndex = -1;
-            SetMovePanel("-", "-", "-", "-", "-", "-");
-            UpdateMoveButtonsInteractable();
+            SetMovePanel(emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveDescription);
             PreviewSelectedMoveEffect();
         }
 
@@ -259,31 +287,33 @@ namespace MechBattle
             if (index == 0 && HasMove(ra)) ShowMoveFrom(ra);
             else if (index == 1 && HasMove(la)) ShowMoveFrom(la);
             else if (index == 2 && HasMove(lb)) ShowMoveFrom(lb);
-            else SetMovePanel("-", "-", "-", "-", "-", "-");
+            else SetMovePanel(emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveDescription);
 
-            UpdateMoveButtonsInteractable();
             PreviewSelectedMoveEffect();
-        }
-
-        private void UpdateMoveButtonsInteractable()
-        {
-            if (move1Button) move1Button.interactable = _selectedMoveIndex != 0;
-            if (move2Button) move2Button.interactable = _selectedMoveIndex != 1;
-            if (move3Button) move3Button.interactable = _selectedMoveIndex != 2;
         }
 
         private void ShowMoveFrom(MechPart part)
         {
-            if (!HasMove(part)) { SetMovePanel("-", "-", "-", "-", "-", "-"); return; }
+            if (!HasMove(part))
+            {
+                SetMovePanel(emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveLabel, emptyMoveDescription);
+                return;
+            }
 
             MoveDefinition mv = part.moves[0];
-            string typeDisplay = string.IsNullOrEmpty(mv.damageType) ? "-" : mv.damageType.ToUpperInvariant();
-            string effectText = !string.IsNullOrEmpty(mv.effect) ? mv.effect :
-                                 (!string.IsNullOrEmpty(part.rawData) ? part.rawData : "-");
+            string typeDisplay = string.IsNullOrEmpty(mv.damageType) ? emptyMoveLabel : mv.damageType.ToUpperInvariant();
+
+            string effectText;
+            if (!string.IsNullOrWhiteSpace(mv.effect))
+                effectText = mv.effect;
+            else if (usePartRawDataAsDescFallback && !string.IsNullOrWhiteSpace(part.rawData))
+                effectText = part.rawData;
+            else
+                effectText = emptyMoveDescription;
 
             SetMovePanel(
-                mv.moveName ?? "-",
-                (part.partName ?? "-").ToUpperInvariant(),
+                string.IsNullOrEmpty(mv.moveName) ? emptyMoveLabel : mv.moveName,
+                string.IsNullOrEmpty(part.partName) ? emptyMoveLabel : part.partName,
                 mv.baseDamage.ToString(),
                 typeDisplay,
                 mv.targetType.ToString().ToUpperInvariant(),
@@ -301,11 +331,61 @@ namespace MechBattle
             if (moveDescText) moveDescText.text = desc;
         }
 
+        // --- PaperDoll Helpers -------------------------------------------------
+
+        private void SetImage(Image img, Sprite s)
+        {
+            if (!img) return;
+            img.sprite = s;
+            img.preserveAspect = true;
+            img.enabled = s != null;
+        }
+
         private Sprite TryGetSprite(object obj)
         {
-            // plug later if you add editorSprite fields
+            if (obj == null) return null;
+
+            Sprite s = GetSpriteFromMember(obj, "editorSprite")
+                    ?? GetSpriteFromMember(obj, "paperDollSprite")
+                    ?? GetSpriteFromMember(obj, "sprite")
+                    ?? GetSpriteFromMember(obj, "icon");
+            if (s) return s;
+
+            string key = null;
+            if (obj is Matrix mm) key = mm.matrixCode;
+            else if (obj is MechPart pp) key = pp.partCode;
+
+            if (!string.IsNullOrEmpty(key))
+            {
+                var spr = Resources.Load<Sprite>($"PaperDoll/{key}");
+                if (!spr) spr = Resources.Load<Sprite>(key);
+                return spr;
+            }
+
             return null;
         }
+
+        private Sprite GetSpriteFromMember(object instance, string memberName)
+        {
+            if (instance == null) return null;
+            var t = instance.GetType();
+
+            var f = t.GetField(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (f != null && typeof(Sprite).IsAssignableFrom(f.FieldType))
+            {
+                return (Sprite)f.GetValue(instance);
+            }
+
+            var p = t.GetProperty(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (p != null && typeof(Sprite).IsAssignableFrom(p.PropertyType))
+            {
+                return (Sprite)p.GetValue(instance, null);
+            }
+
+            return null;
+        }
+
+        // --- Stats -------------------------------------------------------------
 
         private StatBlock CalculateCurrentStats()
         {
@@ -331,12 +411,66 @@ namespace MechBattle
 
         private void UpdateStatBars(StatBlock s)
         {
-            if (hpBar) hpBar.value = Mathf.Clamp(s.HP, 0, Mathf.Max(1, (int)hpBar.maxValue));
-            if (atkBar) atkBar.value = Mathf.Clamp(s.ATK, 0, Mathf.Max(1, (int)atkBar.maxValue));
-            if (defBar) defBar.value = Mathf.Clamp(s.DEF, 0, Mathf.Max(1, (int)defBar.maxValue));
-            if (engBar) engBar.value = Mathf.Clamp(s.ENG, 0, Mathf.Max(1, (int)engBar.maxValue));
-            if (spdBar) spdBar.value = Mathf.Clamp(s.SPD, 0, Mathf.Max(1, (int)spdBar.maxValue));
-            if (sysBar) sysBar.value = Mathf.Clamp(s.SYS, 0, Mathf.Max(1, (int)sysBar.maxValue));
+            // Use current totals to compute visual maxes (idempotent)
+            EnsureVisualMaxes(s);
+
+            SetBar(hpBar, hpValueText, s.HP);
+            SetBar(atkBar, atkValueText, s.ATK);
+            SetBar(defBar, defValueText, s.DEF);
+            SetBar(engBar, engValueText, s.ENG);
+            SetBar(spdBar, spdValueText, s.SPD);
+            SetBar(sysBar, sysValueText, s.SYS);
+
+            if (logStatsOnChange)
+                Debug.Log($"[EditorController] Stats => HP:{s.HP} ATK:{s.ATK} DEF:{s.DEF} ENG:{s.ENG} SPD:{s.SPD} SYS:{s.SYS}");
+        }
+
+        // Compute visual maxes from current totals (no compounding)
+        private void EnsureVisualMaxes(StatBlock totals)
+        {
+            if (hpBar)
+            {
+                float hpBase = Mathf.Max(hpMinVisualMax, totals.HP);
+                hpBar.maxValue = MakeVisualMaxFromBase(hpBase, hpHeadroom, hpRoundToMultiple);
+            }
+
+            if (!unifyNonHPBars)
+            {
+                if (atkBar) atkBar.maxValue = MakeVisualMaxFromBase(Mathf.Max(nonHPMinVisualMax, totals.ATK), nonHPHeadroom, nonHPRoundToMultiple);
+                if (defBar) defBar.maxValue = MakeVisualMaxFromBase(Mathf.Max(nonHPMinVisualMax, totals.DEF), nonHPHeadroom, nonHPRoundToMultiple);
+                if (engBar) engBar.maxValue = MakeVisualMaxFromBase(Mathf.Max(nonHPMinVisualMax, totals.ENG), nonHPHeadroom, nonHPRoundToMultiple);
+                if (spdBar) spdBar.maxValue = MakeVisualMaxFromBase(Mathf.Max(nonHPMinVisualMax, totals.SPD), nonHPHeadroom, nonHPRoundToMultiple);
+                if (sysBar) sysBar.maxValue = MakeVisualMaxFromBase(Mathf.Max(nonHPMinVisualMax, totals.SYS), nonHPHeadroom, nonHPRoundToMultiple);
+            }
+            else
+            {
+                float nonHPBase = Mathf.Max(
+                    nonHPMinVisualMax,
+                    totals.ATK, totals.DEF, totals.ENG, totals.SPD, totals.SYS
+                );
+                float visual = MakeVisualMaxFromBase(nonHPBase, nonHPHeadroom, nonHPRoundToMultiple);
+
+                if (atkBar) atkBar.maxValue = visual;
+                if (defBar) defBar.maxValue = visual;
+                if (engBar) engBar.maxValue = visual;
+                if (spdBar) spdBar.maxValue = visual;
+                if (sysBar) sysBar.maxValue = visual;
+            }
+        }
+
+        private float MakeVisualMaxFromBase(float baseVal, float headroom, int roundToMultiple)
+        {
+            float v = baseVal * (1f + Mathf.Clamp01(headroom));
+            if (roundToMultiple > 1)
+                v = Mathf.Ceil(v / roundToMultiple) * roundToMultiple;
+            return Mathf.Max(1f, v);
+        }
+
+        private void SetBar(Slider bar, Text valueText, int value)
+        {
+            if (!bar) return;
+            bar.value = Mathf.Clamp(value, 0, Mathf.Max(1, (int)bar.maxValue));
+            if (valueText) valueText.text = value.ToString();
         }
 
         private void ConfigureStatBarRanges()

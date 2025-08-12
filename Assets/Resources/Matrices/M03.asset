@@ -19,7 +19,7 @@ MonoBehaviour:
     ATK: 40
     DEF: 20
     ENG: 80
-    SPD: 70
+    SPD: 40
     SYS: 30
     PROC: 60
   passive1: Residual Energy

@@ -19,7 +19,7 @@ MonoBehaviour:
     ATK: 30
     DEF: 40
     ENG: 50
-    SPD: 50
+    SPD: 20
     SYS: 40
     PROC: 60
   passive1: Auto-Regen
