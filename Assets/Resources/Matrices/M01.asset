@@ -24,3 +24,4 @@ MonoBehaviour:
     PROC: 20
   passive1: Fortify
   passive2: Thermal Stability
+  editorSprite: {fileID: 21300000, guid: b7434e7f9ecf5184aaf1f5ddc0a20cfa, type: 3}
