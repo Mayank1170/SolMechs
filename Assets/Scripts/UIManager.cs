@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Reflection;
+using System; // para reflection em TMP
 using MechBattle;
 
 public class UIManager : MonoBehaviour
@@ -35,7 +36,9 @@ public class UIManager : MonoBehaviour
     public Image enemyLeftArmImg;
     public Image enemyLowerImg;
 
-    // -------- PaperDoll init --------
+    // =========================
+    // PaperDoll init
+    // =========================
     public void InitializePaperDolls(MechUnitLoader playerLoader, MechUnitLoader enemyLoader)
     {
         if (playerLoader != null)
@@ -68,7 +71,7 @@ public class UIManager : MonoBehaviour
         if (so == null) return null;
         var t = so.GetType();
 
-        // Try common field/property names you already used in the Editor
+        // tenta campos/propriedades comuns
         string[] names = { "battleSprite", "paperDollSprite", "editorSprite", "sprite", "icon" };
         foreach (var n in names)
         {
@@ -86,7 +89,7 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // Fallback by code via Resources
+        // Fallback por Resources key
         string key = null;
         if (so is Matrix mm) key = mm.matrixCode;
         else if (so is MechPart mp) key = mp.partCode;
@@ -99,10 +102,12 @@ public class UIManager : MonoBehaviour
         }
         return null;
     }
-    // -------- end PaperDoll init --------
 
-    // -------- Health Bars --------
-    public void InitializeHealthBars(MechUnit playerUnit, MechUnit enemyUnit, Dictionary<ModuleSlot, int> playerMaxHPs, Dictionary<ModuleSlot, int> enemyMaxHPs)
+    // =========================
+    // Health Bars
+    // =========================
+    public void InitializeHealthBars(MechUnit playerUnit, MechUnit enemyUnit,
+        Dictionary<ModuleSlot, int> playerMaxHPs, Dictionary<ModuleSlot, int> enemyMaxHPs)
     {
         UpdateHealthBar(playerMatrixHPBar, playerUnit.matrixHP, playerMaxHPs[ModuleSlot.Matrix]);
         UpdateHealthBar(playerRightArmHPBar, playerUnit.partStatuses[ModuleSlot.RightArm].currentHP, playerMaxHPs[ModuleSlot.RightArm]);
@@ -124,8 +129,11 @@ public class UIManager : MonoBehaviour
             if (bar.fillRect != null)
             {
                 Image fillImage = bar.fillRect.GetComponent<Image>();
-                fillImage.color = Color.Lerp(Color.red, Color.green, (float)currentHP / Mathf.Max(1, maxHP));
-                if (currentHP <= 0) fillImage.color = Color.gray;
+                if (fillImage != null)
+                {
+                    fillImage.color = Color.Lerp(Color.red, Color.green, (float)currentHP / Mathf.Max(1, maxHP));
+                    if (currentHP <= 0) fillImage.color = Color.gray;
+                }
             }
         }
     }
@@ -183,33 +191,80 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // -------- Action Buttons --------
+    // =========================
+    // Action Buttons
+    // =========================
+
+    // rótulos curtos para slots (cabem no botão)
+    private static string ShortSlot(ModuleSlot slot)
+    {
+        switch (slot)
+        {
+            case ModuleSlot.RightArm: return "R. Arm";
+            case ModuleSlot.LeftArm: return "L. Arm";
+            case ModuleSlot.LowerBody: return "Lower";
+            case ModuleSlot.Matrix: return "Matrix";
+            default: return slot.ToString();
+        }
+    }
+
+    // define texto tanto em Text (Legacy) quanto em TMP (sem precisar referenciar TMPro)
+    private void SetButtonLabel(Button btn, string text)
+    {
+        var legacy = btn.GetComponentInChildren<Text>(true);
+        if (legacy) { legacy.text = text; return; }
+
+        // tenta achar TMP por reflexão
+        var comps = btn.GetComponentsInChildren<Component>(true);
+        foreach (var c in comps)
+        {
+            if (c == null) continue;
+            var type = c.GetType();
+            if (type.Name == "TextMeshProUGUI")
+            {
+                var prop = type.GetProperty("text", BindingFlags.Public | BindingFlags.Instance);
+                if (prop != null) prop.SetValue(c, text, null);
+                return;
+            }
+        }
+    }
+
+    // Só nome do ataque; desabilita se não houver
     public void RenderActionButtons(MechUnit unit, System.Action<ModuleSlot, AttackData> onAttackSelected)
     {
         ClearButtonListeners();
         int buttonIndex = 0;
+
         if (unit != null && unit.modules != null)
         {
             foreach (var kvp in unit.modules)
             {
+                if (buttonIndex >= actionButtons.Length) break;
+
                 ModuleSlot slot = kvp.Key;
                 ModuleData module = kvp.Value;
 
-                if (unit.IsPartBroken(slot) || buttonIndex >= actionButtons.Length) continue;
+                if (unit.IsPartBroken(slot)) continue;
 
-                var btn = actionButtons[buttonIndex];
+                var btn = actionButtons[buttonIndex++];
                 btn.gameObject.SetActive(true);
-                btn.interactable = true;
-                string label = $"{slot} – {module?.attack?.attackName ?? "No Attack"}";
-                btn.GetComponentInChildren<Text>().text = label;
 
-                ModuleSlot capturedSlot = slot;
-                AttackData capturedAttack = module?.attack;
-                btn.onClick.AddListener(() => onAttackSelected(capturedSlot, capturedAttack));
+                string attackName = module?.attack?.attackName;
+                bool hasAttack = !string.IsNullOrEmpty(attackName);
 
-                buttonIndex++;
+                SetButtonLabel(btn, hasAttack ? attackName : "(no attack)");
+                btn.interactable = hasAttack;
+
+                btn.onClick.RemoveAllListeners();
+                if (hasAttack)
+                {
+                    ModuleSlot capturedSlot = slot;
+                    AttackData capturedAttack = module.attack;
+                    btn.onClick.AddListener(() => onAttackSelected(capturedSlot, capturedAttack));
+                }
             }
         }
+
         for (int i = buttonIndex; i < actionButtons.Length; i++)
             actionButtons[i].gameObject.SetActive(false);
     }
@@ -225,13 +280,13 @@ public class UIManager : MonoBehaviour
             if (slot != ModuleSlot.Matrix && userUnit.IsPartBroken(slot)) continue;
             if (buttonIndex >= actionButtons.Length) break;
 
-            var btn = actionButtons[buttonIndex];
+            var btn = actionButtons[buttonIndex++];
             btn.gameObject.SetActive(true);
             btn.interactable = true;
-            btn.GetComponentInChildren<Text>().text = $"My {slot}";
-            ModuleSlot capturedSlot = slot;
+            SetButtonLabel(btn, $"Self: {ShortSlot(slot)}");
+
+            var capturedSlot = slot;
             btn.onClick.AddListener(() => onTargetSelected(capturedSlot));
-            buttonIndex++;
         }
 
         for (int i = buttonIndex; i < actionButtons.Length; i++)
@@ -250,40 +305,47 @@ public class UIManager : MonoBehaviour
             if (slot != ModuleSlot.Matrix && targetUnit.IsPartBroken(slot)) continue;
             if (buttonIndex >= actionButtons.Length) break;
 
-            var btn = actionButtons[buttonIndex];
+            var btn = actionButtons[buttonIndex++];
             btn.gameObject.SetActive(true);
             btn.interactable = true;
-            btn.GetComponentInChildren<Text>().text = $"Opponent's {slot}";
-            ModuleSlot capturedSlot = slot;
+            SetButtonLabel(btn, ShortSlot(slot));
+
+            var capturedSlot = slot;
             btn.onClick.AddListener(() => onTargetSelected(capturedSlot));
-            buttonIndex++;
         }
 
         for (int i = buttonIndex; i < actionButtons.Length; i++)
             actionButtons[i].gameObject.SetActive(false);
     }
 
+    // =========================
+    // Log
+    // =========================
     public void LogMessage(string message)
     {
-        combatlogText.text += message + "\n";
+        if (combatlogText != null)
+            combatlogText.text += message + "\n";
         ScrollToBottom();
     }
 
     public void ScrollToBottom()
     {
+        if (combatScroll == null) return;
         Canvas.ForceUpdateCanvases();
         combatScroll.verticalNormalizedPosition = 0f;
     }
 
     public void ClearButtonListeners()
     {
+        if (actionButtons == null) return;
         foreach (var btn in actionButtons)
-            btn.onClick.RemoveAllListeners();
+            if (btn) btn.onClick.RemoveAllListeners();
     }
 
     public void DisableAllButtons()
     {
+        if (actionButtons == null) return;
         foreach (var btn in actionButtons)
-            btn.interactable = false;
+            if (btn) btn.interactable = false;
     }
 }
