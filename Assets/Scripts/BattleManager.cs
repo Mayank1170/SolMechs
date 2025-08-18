@@ -39,8 +39,10 @@ public class BattleManager : MonoBehaviour
         uiManager.DisableSliderInteractabilityAndHandles();
         uiManager.InitializeHealthBars(playerUnit, enemyUnit, playerMaxHPs, enemyMaxHPs);
 
-        // NEW: set the sprites for both sides from the loaders
+        // set the sprites for both sides from the loaders
         uiManager.InitializePaperDolls(playerLoader, enemyLoader);
+
+        // IMPORTANT: não chamar HideBattleResult() aqui — o GO está desativado por padrão
 
         StartTurn();
     }
@@ -74,6 +76,15 @@ public class BattleManager : MonoBehaviour
 
     public void StartTurn()
     {
+        // NOVO: se o jogador não pode atacar (3 partes quebradas / sem módulos utilizáveis) → derrota imediata
+        if (!HasAnyUsableModule(playerUnit) || AllNonMatrixPartsBroken(playerUnit))
+        {
+            uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
+            currentState = BattleState.Defeat;
+            EndBattle(false);
+            return;
+        }
+
         currentState = BattleState.SelectingAttack;
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
@@ -147,17 +158,27 @@ public class BattleManager : MonoBehaviour
             uiManager.LogMessage($"{enemyUnit.Name}'s {targetSlot} is no longer combat-ready!");
             ResetBuffStages(enemyUnit, targetSlot);
         }
+
+        // Condição 1: Matrix destruída
         if (enemyUnit.matrixHP <= 0)
         {
             uiManager.LogMessage($"{enemyUnit.Name}'s Matrix was destroyed!\n{playerUnit.Name} wins!");
             currentState = BattleState.Victory;
-            EndBattle();
+            EndBattle(true);
+            return;
         }
-        else
+
+        // NOVO – Condição 2: 3 partes destruídas / não consegue mais atacar
+        if (AllNonMatrixPartsBroken(enemyUnit) || !HasAnyUsableModule(enemyUnit))
         {
-            currentState = BattleState.EnemyTurn;
-            TriggerEnemyTurn();
+            uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
+            currentState = BattleState.Victory;
+            EndBattle(true);
+            return;
         }
+
+        currentState = BattleState.EnemyTurn;
+        TriggerEnemyTurn();
     }
 
     public void EnemyTurn()
@@ -165,6 +186,7 @@ public class BattleManager : MonoBehaviour
         if (currentState != BattleState.EnemyTurn) return;
         if (enemyUnit == null) return;
 
+        // Se o inimigo não pode atacar, vitória do player
         var validModules = new List<ModuleSlot>();
         foreach (var kvp in enemyUnit.modules)
             if (!enemyUnit.IsPartBroken(kvp.Key)) validModules.Add(kvp.Key);
@@ -173,7 +195,7 @@ public class BattleManager : MonoBehaviour
         {
             uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
             currentState = BattleState.Victory;
-            EndBattle();
+            EndBattle(true);
             return;
         }
 
@@ -219,11 +241,22 @@ public class BattleManager : MonoBehaviour
                 uiManager.LogMessage($"{playerUnit.Name}'s {target} is no longer combat-ready!");
                 ResetBuffStages(playerUnit, target);
             }
+
+            // Condição 1: Matrix do player destruída
             if (playerUnit.matrixHP <= 0)
             {
                 uiManager.LogMessage($"{playerUnit.Name}'s Matrix was destroyed!\n{enemyUnit.Name} wins!");
                 currentState = BattleState.Defeat;
-                EndBattle();
+                EndBattle(false);
+                return;
+            }
+
+            // NOVO – Condição 2: 3 partes do player destruídas / sem módulos
+            if (AllNonMatrixPartsBroken(playerUnit) || !HasAnyUsableModule(playerUnit))
+            {
+                uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
+                currentState = BattleState.Defeat;
+                EndBattle(false);
                 return;
             }
         }
@@ -234,7 +267,13 @@ public class BattleManager : MonoBehaviour
     }
 
     private void TriggerEnemyTurn() { Invoke(nameof(EnemyTurn), 1f); }
-    private void EndBattle() { uiManager.DisableAllButtons(); }
+
+    // UPDATED: show result panel
+    private void EndBattle(bool playerWon)
+    {
+        uiManager.DisableAllButtons();
+        uiManager.ShowBattleResult(playerWon, 0);
+    }
 
     private int GetCurrentHP(MechUnit unit, ModuleSlot slot)
     {
@@ -310,7 +349,7 @@ public class BattleManager : MonoBehaviour
 
         if (effect.ToLower().Contains("piercing"))
         {
-            uiManager.LogMessage("Effect: Piercing � halves defense this turn.");
+            uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
             return;
         }
     }
@@ -414,5 +453,26 @@ public class BattleManager : MonoBehaviour
         {
             unit.partStatuses[slot].buffs.Clear();
         }
+    }
+
+    // -------- Helpers de condição de vitória/derrota --------
+    private bool AllNonMatrixPartsBroken(MechUnit unit)
+    {
+        if (unit == null) return false;
+        return unit.IsPartBroken(ModuleSlot.RightArm)
+            && unit.IsPartBroken(ModuleSlot.LeftArm)
+            && unit.IsPartBroken(ModuleSlot.LowerBody);
+    }
+
+    private bool HasAnyUsableModule(MechUnit unit)
+    {
+        if (unit == null || unit.modules == null) return false;
+        foreach (var kvp in unit.modules)
+        {
+            // Consider only non-matrix module slots and check if part is not broken
+            if (kvp.Key != ModuleSlot.Matrix && !unit.IsPartBroken(kvp.Key))
+                return true;
+        }
+        return false;
     }
 }
