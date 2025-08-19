@@ -21,6 +21,9 @@ public class BattleManager : MonoBehaviour
     private enum BattleState { SelectingAttack, SelectingTarget, SelectingSelfTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState;
 
+    // NEW: battle-over guard to avoid double endings or late invokes
+    private bool battleOver = false;
+
     // Bootstrap
     private void Start()
     {
@@ -76,6 +79,8 @@ public class BattleManager : MonoBehaviour
 
     public void StartTurn()
     {
+        if (battleOver) return;
+
         // NOVO: se o jogador não pode atacar (3 partes quebradas / sem módulos utilizáveis) → derrota imediata
         if (!HasAnyUsableModule(playerUnit) || AllNonMatrixPartsBroken(playerUnit))
         {
@@ -183,6 +188,7 @@ public class BattleManager : MonoBehaviour
 
     public void EnemyTurn()
     {
+        if (battleOver) return;
         if (currentState != BattleState.EnemyTurn) return;
         if (enemyUnit == null) return;
 
@@ -266,11 +272,21 @@ public class BattleManager : MonoBehaviour
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
 
-    private void TriggerEnemyTurn() { Invoke(nameof(EnemyTurn), 1f); }
+    private void TriggerEnemyTurn()
+    {
+        if (battleOver) return;
+        Invoke(nameof(EnemyTurn), 1f);
+    }
 
-    // UPDATED: show result panel
+    // UPDATED: show result panel + guard
     private void EndBattle(bool playerWon)
     {
+        if (battleOver) return;
+        battleOver = true;
+
+        // Ensure no pending enemy turns fire after the battle is over
+        CancelInvoke(nameof(EnemyTurn));
+
         uiManager.DisableAllButtons();
         uiManager.ShowBattleResult(playerWon, 0);
     }
