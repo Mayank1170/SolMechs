@@ -42,3 +42,4 @@ MonoBehaviour:
     SPD: 8
 
     move: Overdrive Spike|40|Energy|Single'
+  editorSprite: {fileID: 21300000, guid: 6aebceeb9a3f57e48bac8c268aaa861c, type: 3}

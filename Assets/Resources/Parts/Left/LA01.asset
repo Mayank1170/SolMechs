@@ -42,4 +42,4 @@ MonoBehaviour:
     SPD: 0
 
     move: Reinforce Frame|0|Physical|Self|+20 DEF (1 turn)'
-  editorSprite: {fileID: 21300000, guid: 10f420ad9a6e1a047ad467bb17d26788, type: 3}
+  editorSprite: {fileID: 21300000, guid: b05aa94ffcc99a94db083a6dd3478c17, type: 3}

@@ -42,4 +42,4 @@ MonoBehaviour:
     SPD: 5
 
     move: Crush Grip|50|Physical|Single'
-  editorSprite: {fileID: 21300000, guid: 54f39e518300a1c49a122db80b296862, type: 3}
+  editorSprite: {fileID: 21300000, guid: b2ae5ed5268a9c449a426ebdfb4b8800, type: 3}
