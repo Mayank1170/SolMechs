@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using MechBattle;
 
 public class UIManager : MonoBehaviour
 {
+    // =========================== Core UI ===========================
     [Header("Combat Log & Actions")]
     public Text combatlogText;
     public Button[] actionButtons;
@@ -39,10 +40,10 @@ public class UIManager : MonoBehaviour
     [Header("Result Panel")]
     public BattleResultPanel resultPanel;
 
-    // ===== Battle FX (optional, lightweight) =====
+    // =========================== Light FX ==========================
     [Header("Battle FX (optional)")]
     public bool fxEnabled = true;                 // master switch
-    public RectTransform battleRoot;              // for small screen shake (assign a top-level RectTransform)
+    public RectTransform battleRoot;              // used for a small screen shake
     public GameObject floatingTextPrefab;         // prefab with Text (or TMP) + CanvasGroup
 
     [Range(0.05f, 0.6f)] public float hpTweenDuration = 0.2f;
@@ -56,7 +57,43 @@ public class UIManager : MonoBehaviour
     // Internal flag to avoid FX during initial layout
     private bool _isInitializing = false;
 
-    // ===== PaperDoll init =====
+    // ========================= Buff System =========================
+    [Header("Buff System")]
+    public GameObject buffChipPrefab;
+
+    [Header("Buff Icons (Up/Down per stat)")]
+    public Sprite iconATK_Up;
+    public Sprite iconATK_Down;
+
+    public Sprite iconDEF_Up;
+    public Sprite iconDEF_Down;
+
+    public Sprite iconENG_Up;
+    public Sprite iconENG_Down;
+
+    public Sprite iconSYS_Up;
+    public Sprite iconSYS_Down;
+
+    public Sprite iconSPD_Up;
+    public Sprite iconSPD_Down;
+
+    [Header("Buff Containers - Player")]
+    public Transform playerMatrixBuffs;
+    public Transform playerRightBuffs;
+    public Transform playerLeftBuffs;
+    public Transform playerLowerBuffs;
+
+    [Header("Buff Containers - Enemy")]
+    public Transform enemyMatrixBuffs;
+    public Transform enemyRightBuffs;
+    public Transform enemyLeftBuffs;
+    public Transform enemyLowerBuffs;
+
+    [Header("Buff Colors (numbers only)")]
+    public Color buffColor = new Color(0.08f, 0.95f, 0.59f, 1f);   // green (if you ever want numbers colored)
+    public Color debuffColor = new Color(0.86f, 0.12f, 1f, 1f);    // magenta
+
+    // ======================= PaperDoll Init ========================
     public void InitializePaperDolls(MechUnitLoader playerLoader, MechUnitLoader enemyLoader)
     {
         if (playerLoader != null)
@@ -89,7 +126,7 @@ public class UIManager : MonoBehaviour
         if (so == null) return null;
         var t = so.GetType();
 
-        // Try common names first
+        // Try common field/property names first
         string[] names = { "battleSprite", "paperDollSprite", "editorSprite", "sprite", "icon" };
         foreach (var n in names)
         {
@@ -120,9 +157,7 @@ public class UIManager : MonoBehaviour
         }
         return null;
     }
-    // ===== end PaperDoll init =====
-
-    // ===== Health Bars =====
+    // ===================== Health Bars =====================
     public void InitializeHealthBars(MechUnit playerUnit, MechUnit enemyUnit,
         Dictionary<ModuleSlot, int> playerMaxHPs, Dictionary<ModuleSlot, int> enemyMaxHPs)
     {
@@ -243,7 +278,7 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // ===== Action Buttons =====
+    // ====================== Action Buttons ======================
     public void RenderActionButtons(MechUnit unit, System.Action<ModuleSlot, AttackData> onAttackSelected)
     {
         ClearButtonListeners();
@@ -346,6 +381,7 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    // ========================== Log / Result ==========================
     public void LogMessage(string message)
     {
         if (combatlogText)
@@ -373,7 +409,6 @@ public class UIManager : MonoBehaviour
             btn.interactable = false;
     }
 
-    // ===== Result Panel API =====
     public void ShowBattleResult(bool playerWon, int points = 0)
     {
         if (!resultPanel)
@@ -397,7 +432,7 @@ public class UIManager : MonoBehaviour
         resultPanel.Hide();
     }
 
-    // ===== FX helpers =====
+    // ============================ FX =============================
     public void Flash(Image img, float dur = -1f)
     {
         if (!fxEnabled || !img) return;
@@ -478,7 +513,7 @@ public class UIManager : MonoBehaviour
         rt.anchoredPosition = origin;
     }
 
-    // ===== helpers to get target images =====
+    // Helpers to get target images for flash anchoring
     private Image GetPlayerImageFor(ModuleSlot slot)
     {
         switch (slot)
@@ -499,6 +534,158 @@ public class UIManager : MonoBehaviour
             case ModuleSlot.LeftArm: return enemyLeftArmImg;
             case ModuleSlot.LowerBody: return enemyLowerImg;
             default: return null;
+        }
+    }
+
+    // ======================== Buff Chips API ========================
+    /// <summary>
+    /// Rebuilds the chips for a specific slot (player or enemy). Only non-zero stages are shown.
+    /// It also disables any background Images without sprites to avoid a white square.
+    /// </summary>
+    public void SetBuffChips(bool isPlayer, ModuleSlot slot, Dictionary<string, int> stages)
+    {
+        var container = GetBuffContainer(isPlayer, slot);
+        if (!container) return;
+
+        // Clear previous chips
+        for (int i = container.childCount - 1; i >= 0; i--)
+            Destroy(container.GetChild(i).gameObject);
+
+        if (!buffChipPrefab || stages == null) return;
+
+        string[] order = { "ATK", "DEF", "ENG", "SYS", "SPD" };
+
+        foreach (var stat in order)
+        {
+            if (!stages.TryGetValue(stat, out int val) || val == 0) continue;
+
+            var go = Instantiate(buffChipPrefab, container);
+
+            // Resolve intended icon and label; then hide any stray background Images
+            Image icon; Text label;
+            ResolveChipVisuals(go, out icon, out label);
+
+            // Choose sprite by stat and sign
+            if (icon)
+            {
+                var spr = GetBuffSprite(stat, val);
+                icon.sprite = spr;
+                icon.color = Color.white;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.enabled = (spr != null);
+
+                if (spr == null)
+                    Debug.LogWarning($"[UIManager] Missing sprite for {stat} {(val > 0 ? "Up" : "Down")}.");
+            }
+
+            // Make sure no other Image in the prefab shows a white square
+            HideBackgroundImagesExcept(go, icon);
+
+            // Value text (+/-N)
+            if (label)
+            {
+                label.text = (val > 0 ? "+" : "") + val.ToString();
+                label.color = Color.white; // keep as pure white; colors are carried by sprites
+                label.raycastTarget = false;
+            }
+
+            // Normalize chip rect size/scale in case the prefab has none
+            var rt = go.transform as RectTransform;
+            if (rt)
+            {
+                if (rt.sizeDelta == Vector2.zero || rt.sizeDelta.x > 64f)
+                    rt.sizeDelta = new Vector2(22f, 22f);
+                rt.localScale = Vector3.one;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find the correct icon and label inside the chip prefab.
+    /// Prefers children named "Icon" / "Label"; falls back to the first Image/Text found.
+    /// </summary>
+    private void ResolveChipVisuals(GameObject go, out Image icon, out Text label)
+    {
+        icon = null;
+        label = null;
+
+        var images = go.GetComponentsInChildren<Image>(true);
+        var texts = go.GetComponentsInChildren<Text>(true);
+
+        foreach (var img in images)
+            if (img.name.Equals("Icon", System.StringComparison.OrdinalIgnoreCase)) { icon = img; break; }
+        if (!icon && images.Length > 0) icon = images[0];
+
+        foreach (var t in texts)
+            if (t.name.Equals("Label", System.StringComparison.OrdinalIgnoreCase)) { label = t; break; }
+        if (!label && texts.Length > 0) label = texts[0];
+    }
+
+    /// <summary>
+    /// Disable any Image components (other than the chosen icon) that have no sprite,
+    /// so they don't render as a solid white square.
+    /// </summary>
+    private void HideBackgroundImagesExcept(GameObject go, Image keep)
+    {
+        var images = go.GetComponentsInChildren<Image>(true);
+        foreach (var img in images)
+        {
+            if (img == keep) continue;
+
+            // If an Image has no sprite assigned, disable it to avoid a solid color quad.
+            if (img.sprite == null)
+                img.enabled = false;
+
+            // Also make sure we don't accidentally tint backgrounds
+            img.raycastTarget = false;
+        }
+    }
+
+    /// <summary>
+    /// Get the right container for player/enemy and slot.
+    /// </summary>
+    private Transform GetBuffContainer(bool isPlayer, ModuleSlot slot)
+    {
+        if (isPlayer)
+        {
+            switch (slot)
+            {
+                case ModuleSlot.Matrix: return playerMatrixBuffs;
+                case ModuleSlot.RightArm: return playerRightBuffs;
+                case ModuleSlot.LeftArm: return playerLeftBuffs;
+                case ModuleSlot.LowerBody: return playerLowerBuffs;
+            }
+        }
+        else
+        {
+            switch (slot)
+            {
+                case ModuleSlot.Matrix: return enemyMatrixBuffs;
+                case ModuleSlot.RightArm: return enemyRightBuffs;
+                case ModuleSlot.LeftArm: return enemyLeftBuffs;
+                case ModuleSlot.LowerBody: return enemyLowerBuffs;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Return the Up/Down sprite for the given stat based on sign of stageValue.
+    /// </summary>
+    private Sprite GetBuffSprite(string stat, int stageValue)
+    {
+        bool up = stageValue > 0;
+        switch (stat.ToUpper())
+        {
+            case "ATK": return up ? iconATK_Up : iconATK_Down;
+            case "DEF": return up ? iconDEF_Up : iconDEF_Down;
+            case "ENG": return up ? iconENG_Up : iconENG_Down;
+            case "SYS": return up ? iconSYS_Up : iconSYS_Down;
+            case "SPD": return up ? iconSPD_Up : iconSPD_Down;
+            default:
+                Debug.LogWarning($"[UIManager] Unknown stat: {stat}");
+                return null;
         }
     }
 }
