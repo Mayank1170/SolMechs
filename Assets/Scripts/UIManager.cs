@@ -688,4 +688,31 @@ public class UIManager : MonoBehaviour
                 return null;
         }
     }
+
+    // =========================== FX: Attack Animations ===========================
+    [Header("Attack FX")]
+    public AttackFxLibrary attackFxLibrary;  // NEW: ScriptableObject mapping attackName -> UIFxPlayer prefab
+
+    /// <summary>
+    /// NEW: Plays a pixel-art attack FX under the appropriate slot image.
+    /// fromPlayer: true if the attack comes from the player's side (left -> right).
+    /// sourceSlot: which part launched the attack (used to choose a visual anchor).
+    /// attackName: looked up in the AttackFxLibrary.
+    /// </summary>
+    public void PlayAttackFx(bool fromPlayer, ModuleSlot sourceSlot, string attackName) // NEW
+    {
+        if (!fxEnabled || attackFxLibrary == null) return;
+        var prefab = attackFxLibrary.Get(attackName);
+        if (prefab == null) return;
+
+        // Pick a visual anchor. Using the launching slot's image is readable; fallback to Matrix.
+        Image anchorImg = fromPlayer ? GetPlayerImageFor(sourceSlot) : GetEnemyImageFor(sourceSlot);
+        if (anchorImg == null) anchorImg = fromPlayer ? playerMatrixImg : enemyMatrixImg;
+
+        Transform parent = anchorImg ? anchorImg.transform : this.transform;
+        bool leftToRight = fromPlayer; // enemy -> player will flip inside UIFxPlayer
+
+        var fx = Instantiate(prefab);
+        fx.PlayUnder(parent, leftToRight);
+    }
 }
