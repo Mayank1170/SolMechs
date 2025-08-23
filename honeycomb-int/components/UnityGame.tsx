@@ -73,12 +73,12 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
     <div className="flex flex-col min-h-screen">
       {/* Game Header */}
       <div className="w-full flex justify-between items-center z-10 p-4 bg-contain bg-center bg-no-repeat">
-        <div>
+        {/* <div>
           <h1 className="text-2xl font-bold text-white font-mek">🎮 SolMechs Arena</h1>
           <p className="text-gray-300 text-sm font-mek">
             Player: {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
           </p>
-        </div>
+        </div> */}
         <button
           onClick={onBackToMenu}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-bold font-mek"
@@ -93,18 +93,18 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
           ref={iframeRef}
           src="/unity/index.html"
           className="w-full h-full border-0"
-          style={{ height: 'calc(100vh - 80px)' }}
+          style={{ height: 'calc(100vh)' }}
           title="SolMechs Unity WebGL Game"
           allow="accelerometer; gyroscope; microphone; camera"
         />
       </div>
       
       {/* Web3 Status Bar */}
-      <div className="w-full text-center text-green-100 text-sm p-2 bg-contain bg-center bg-no-repeat font-mek" style={{backgroundImage: "url('/images/frame.png')", minHeight: '60px'}}>
+      {/* <div className="w-full text-center text-green-100 text-sm p-2 bg-contain bg-center bg-no-repeat font-mek" style={{backgroundImage: "url('/images/frame.png')", minHeight: '60px'}}>
         <div className="flex items-center justify-center h-full">
           <span className="font-bold">🌐 Web3 Bridge Active</span> - Unity can mint rewards and interact with blockchain
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

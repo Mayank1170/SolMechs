@@ -1,13 +1,17 @@
 {
   "dependencies": {
+    "com.playsolana.psdk": "https://github.com/playsolana/PlaySolana.Unity-SDK.git",
+    "com.unity.adaptiveperformance": "5.1.1",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.toolchain.linux-x86_64": "2.0.10",
     "com.unity.ugui": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
+    "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
     "com.unity.modules.particlesystem": "1.0.0",
     "com.unity.modules.physics": "1.0.0",
     "com.unity.modules.physics2d": "1.0.0",
+    "com.unity.modules.subsystems": "1.0.0",
     "com.unity.modules.ui": "1.0.0",
     "com.unity.modules.unitywebrequest": "1.0.0"
   }
