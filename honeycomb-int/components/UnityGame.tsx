@@ -25,7 +25,7 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
           
           return true;
         },
-        
+          
         getBalance: async () => {
           console.log('💰 Unity called: Get user balance');
           // TODO: Integrate with your existing checkPointBalance function
