@@ -1,10 +1,14 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import localFont from 'next/font/local'
 import { WalletProviders } from './providers'
 import React from 'react'
 
-const inter = Inter({ subsets: ['latin'] })
+const mekMono = localFont({
+  src: '../public/font/MEK-Mono.otf',
+  display: 'swap',
+  variable: '--font-mek-mono'
+})
 
 export const metadata: Metadata = {
   title: 'Honeycomb Integration',
@@ -17,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={mekMono.variable}>
+      <body className={`${mekMono.className} font-mek bg-cover bg-center bg-no-repeat min-h-screen`} style={{backgroundImage: "url('/images/bg.png')"}}>
         <WalletProviders>
           {children}
         </WalletProviders>

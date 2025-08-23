@@ -1,395 +1,409 @@
 'use client'
 
-import React, { useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import React, { useState, useEffect } from "react";
+import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client, PROJECT_ADDRESS } from "../constants/client";
+import Image from "next/image";
+import UnityGame from "../components/UnityGame";
+
+// Game flow states
+type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_PROFILE' | 'PLAYING';
 
 export default function Home() {
-  const wallet = useWallet();
+  const user = useUser();
+  const solanaWallet = useWallet({ type: "solana" });
   const [isLoading, setIsLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
+  const [gameState, setGameState] = useState<GameState>('CONNECTING');
+  const [userExists, setUserExists] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
   const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
 
-  const createProject = async () => {
-    if (!wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
 
+  // Main flow logic when user authentication status changes
+  useEffect(() => {
+    const handleUserFlow = async () => {
+      if (!user?.isAuthenticated) {
+        setGameState('CONNECTING');
+        return;
+      }
+
+      // User is authenticated with Civic
+      if (!solanaWallet.address) {
+        // User authenticated but no wallet - check if they need to create one or if they have an existing Honeycomb account
+        await checkIfUserNeedsWallet();
+      } else {
+        // User has wallet - proceed with normal flow
+        await checkUserAndProfile();
+      }
+    };
+
+    handleUserFlow();
+  }, [user?.isAuthenticated, solanaWallet.address]);
+
+  // Check if user needs wallet creation or if they can proceed directly
+  const checkIfUserNeedsWallet = async () => {
+    if (!user?.isAuthenticated) return;
+    
     setIsLoading(true);
+    setGameState('CHECKING_USER');
+    
     try {
-      const {
-        createCreateProjectTransaction: { project, tx: txResponse }
-      } = await client.createCreateProjectTransaction({
-        name: "My Project",
-        authority: wallet.publicKey.toString(),
-      });
-
-      const result = await sendClientTransactions(
-        client,
-        wallet,
-        txResponse
-      );
-
-      // Store the project address
-      setProjectAddress(project);
-      setResponse({ ...result, projectAddress: project });
-      console.log("Project created with address:", project);
+      // For new users or users without wallets, auto-create wallet
+      if ('createWallet' in user) {
+        console.log("🆕 New user detected - auto-creating wallet...");
+        await autoCreateWallet();
+      } else {
+        // This shouldn't normally happen, but handle gracefully
+        console.log("❌ Cannot create wallet for this user");
+        alert("Wallet creation not available. Please try again or contact support.");
+        setGameState('CONNECTING');
+      }
     } catch (error) {
-      console.error("Error creating project:", error);
-      alert("Error creating project: " + (error as Error).message);
+      console.error("❌ Error in user flow:", error);
+      setGameState('CONNECTING');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const createProfilesTree = async () => {
-    if (!wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    if (!projectAddress) {
-      alert("Please create a project first");
-      return;
-    }
-
+  // Auto-create wallet for new users
+  const autoCreateWallet = async () => {
+    if (!user || !('createWallet' in user)) return;
+    
     setIsLoading(true);
+    setGameState('CREATING_WALLET');
+    
     try {
-      const {
-        createCreateProfilesTreeTransaction: { tx: txResponse }
-      } = await client.createCreateProfilesTreeTransaction({
-        payer: wallet.publicKey.toString(),
-        project: projectAddress,
-        treeConfig: {
-          basic: {
-            numAssets: 100000, // Can store 100,000 profiles
-          },
+      console.log("🏛️ Creating Civic wallet automatically...");
+      await user.createWallet();
+      console.log("✅ Civic wallet created successfully");
+      
+      // Wallet is now available, the useEffect will trigger checkUserAndProfile
+    } catch (error) {
+      console.error("❌ Error creating Civic wallet:", error);
+      alert("Failed to create wallet automatically. Please try again.");
+      setGameState('CONNECTING');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkUserAndProfile = async () => {
+    // Get address from Civic Solana wallet
+    if (!solanaWallet.address) return;
+    
+    setIsLoading(true);
+    setGameState('CHECKING_USER');
+    
+    try {
+      // Check if user exists
+      const usersResult = await client.findUsers({
+        wallets: [solanaWallet.address]
+      });
+      const honeycombUser = (usersResult as any)?.[0] || null;
+      
+      if (honeycombUser) {
+        setUserExists(true);
+        console.log("✅ User exists:", honeycombUser);
+        
+        // Check if user has profile for this project
+        const profilesResult = await client.findProfiles({
+          projects: [projectAddress],
+          addresses: [solanaWallet.address]
+        });
+        const profile = (profilesResult as any)?.[0] || null;
+        
+        if (profile) {
+          setProfileExists(true);
+          setGameState('PLAYING');
+          console.log("✅ User profile exists - redirecting to game:", profile);
+        } else {
+          setProfileExists(false);
+          setGameState('CREATING_PROFILE');
+          console.log("❌ No profile found for this project - auto-creating profile...");
+          // Auto-create profile for existing user
+          setTimeout(() => createProfileForExistingUser(), 100);
         }
-      });
-
-      const result = await sendClientTransactions(
-        client,
-        wallet,
-        txResponse
-      );
-
-      setResponse(result);
-      console.log("Profiles tree created:", result);
+      } else {
+        setUserExists(false);
+        setProfileExists(false);
+        setGameState('CREATING_PROFILE');
+        console.log("❌ No user found - auto-creating user and profile...");
+        // Auto-create user and profile for new user
+        setTimeout(() => createUserWithProfile(), 100);
+      }
     } catch (error) {
-      console.error("Error creating profiles tree:", error);
-      alert("Error creating profiles tree: " + (error as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createUser = async () => {
-    if (!wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const {
-        createNewUserTransaction: txResponse
-      } = await client.createNewUserTransaction({
-        wallet: wallet.publicKey.toString(),
-        info: {
-          name: "Test User",
-          pfp: "https://lh3.googleusercontent.com/-Jsm7S8BHy4nOzrw2f5AryUgp9Fym2buUOkkxgNplGCddTkiKBXPLRytTMXBXwGcHuRr06EvJStmkHj-9JeTfmHsnT0prHg5Mhg",
-          bio: "This is a test user created through the Honeycomb integration",
-        },
-        payer: wallet.publicKey.toString(),
-      });
-
-      const result = await sendClientTransactions(
-        client,
-        wallet,
-        txResponse
-      );
-
-      setResponse(result);
-      console.log("User created:", result);
-    } catch (error) {
-      console.error("Error creating user:", error);
-      alert("Error creating user: " + (error as Error).message);
+      console.error("Error checking user/profile:", error);
+      // If there's an error, assume we need to create profile
+      setGameState('CREATING_PROFILE');
     } finally {
       setIsLoading(false);
     }
   };
 
   const createUserWithProfile = async () => {
-    if (!wallet.publicKey) {
+    if (!solanaWallet.address) {
       alert("Please connect your wallet first");
       return;
     }
-    if (!projectAddress) {
-      alert("Please create a project and profiles tree first");
-      return;
-    }
+    // Use default name based on wallet address
+    const defaultName = "Player_" + solanaWallet.address.slice(-4);
 
     setIsLoading(true);
     try {
+      // Create user + profile in one transaction (first time user)
+      console.log("🆕 Creating new user with profile...");
       const {
         createNewUserWithProfileTransaction: txResponse
       } = await client.createNewUserWithProfileTransaction({
         project: projectAddress,
-        wallet: wallet.publicKey.toString(),
-        payer: wallet.publicKey.toString(),
+        wallet: solanaWallet.address,
+        payer: solanaWallet.address,
         profileIdentity: "main",
         userInfo: {
-          name: "Honeycomb Developer",
-          bio: "This user is created for testing purposes",
-          pfp: "https://lh3.googleusercontent.com/-Jsm7S8BHy4nOzrw2f5AryUgp9Fym2buUOkkxgNplGCddTkiKBXPLRytTMXBXwGcHuRr06EvJStmkHj-9JeTfmHsnT0prHg5Mhg",
+          name: defaultName,
+          bio: "SolMechs Player",
+          pfp: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(defaultName),
         },
       });
 
+      // Use Civic wallet for signing
       const result = await sendClientTransactions(
         client,
-        wallet,
+        solanaWallet.wallet,
         txResponse
       );
-
-      setResponse(result);
-      console.log("User and profile created:", result);
+      console.log("📋 Transaction result:", result);
+      
+      // Check if transaction was successful
+      const isSuccess = result && result.length > 0 && 
+        result[0].responses && result[0].responses.length > 0 &&
+        result[0].responses[0].status === "Success";
+        
+      if (!isSuccess) {
+        const errorMsg = result[0]?.responses[0]?.error || "Unknown error";
+        throw new Error(errorMsg);
+      }
+      
+      console.log("✅ New user and profile created successfully!");
+      
+      // Only update states if transaction was successful
+      setUserExists(true);
+      setProfileExists(true);
+      setGameState('PLAYING');
+      
+      console.log("🎉 Profile creation successful! Redirecting to game...");
+      
     } catch (error) {
-      console.error("Error creating user with profile:", error);
-      alert("Error creating user with profile: " + (error as Error).message);
+      console.error("❌ Error creating user with profile:", error);
+      handleProfileCreationError(error as Error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const checkUserExists = async () => {
-    if (!wallet.publicKey) {
+  const createProfileForExistingUser = async () => {
+    if (!solanaWallet.address) {
       alert("Please connect your wallet first");
       return;
     }
 
     setIsLoading(true);
     try {
-      const usersResult = await client.findUsers({
-        wallets: [wallet.publicKey.toString()]
-      });
-      const user = (usersResult as any)?.[0] || null;
-
-      setResponse({
-        type: "User Query",
-        exists: !!user,
-        user: user || null,
-        walletAddress: wallet.publicKey.toString()
-      });
-      console.log("User query result:", user);
-    } catch (error) {
-      console.error("Error checking user:", error);
-      setResponse({
-        type: "User Query",
-        exists: false,
-        error: (error as Error).message,
-        walletAddress: wallet.publicKey.toString()
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkUserProfile = async () => {
-    if (!wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    if (!projectAddress) {
-      alert("Please create a project first");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const profilesResult = await client.findProfiles({
-        projects: [projectAddress],
-        identities: ["main"]
-      });
-      const profile = (profilesResult as any)?.[0] || null;
-
-      setResponse({
-        type: "Profile Query",
-        exists: !!profile,
-        profile: profile || null,
+      // User exists, just create profile for this project
+      console.log("👤 Creating profile for existing user...");
+      const {
+        createNewProfileTransaction: txResponse
+      } = await client.createNewProfileTransaction({
         project: projectAddress,
-        walletAddress: wallet.publicKey.toString(),
-        identity: "main"
+        payer: solanaWallet.address,
+        identity: "main",
       });
-      console.log("Profile query result:", profile);
+
+      // Use Civic wallet for signing
+      const result = await sendClientTransactions(
+        client,
+        solanaWallet.wallet,
+        txResponse
+      );
+      console.log("📋 Transaction result:", result);
+      
+      // Check if transaction was successful
+      const isSuccess = result && result.length > 0 && 
+        result[0].responses && result[0].responses.length > 0 &&
+        result[0].responses[0].status === "Success";
+        
+      if (!isSuccess) {
+        const errorMsg = result[0]?.responses[0]?.error || "Unknown error";
+        throw new Error(errorMsg);
+      }
+      
+      console.log("✅ Profile created for existing user successfully!");
+      
+      // Only update states if transaction was successful
+      setUserExists(true);
+      setProfileExists(true);
+      setGameState('PLAYING');
+      
+      console.log("🎉 Profile creation successful! Redirecting to game...");
+      
     } catch (error) {
-      console.error("Error checking profile:", error);
-      setResponse({
-        type: "Profile Query",
-        exists: false,
-        error: (error as Error).message,
-        project: projectAddress,
-        walletAddress: wallet.publicKey.toString()
-      });
+      console.error("❌ Error creating profile for existing user:", error);
+      handleProfileCreationError(error as Error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getAllProjects = async () => {
-    if (!wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const projects = await client.findProjects({
-        authorities: [wallet.publicKey.toString()]
-      });
-
-      setResponse({
-        type: "Projects Query",
-        count: (projects as any)?.project?.length || 0,
-        projects: (projects as any)?.project || [],
-        authority: wallet.publicKey.toString()
-      });
-      console.log("Projects query result:", projects);
-    } catch (error) {
-      console.error("Error getting projects:", error);
-      setResponse({
-        type: "Projects Query",
-        error: (error as Error).message,
-        authority: wallet.publicKey.toString()
-      });
-    } finally {
-      setIsLoading(false);
+  const handleProfileCreationError = (error: Error) => {
+    const errorMessage = error.message;
+    
+    // Check if error is about user already having profile
+    if (errorMessage.includes("User already exists with profile")) {
+      console.log("🔄 User already has profile - redirecting to game...");
+      // Profile already exists, just go to play state
+      setUserExists(true);
+      setProfileExists(true);
+      setGameState('PLAYING');
+    } else if (errorMessage.includes("Attempt to debit an account but found no record of a prior credit")) {
+      // Insufficient balance error
+      alert("❌ Transaction Failed: Insufficient SOL balance\n\nYou need SOL in your wallet to create a profile. Please add some SOL and try again.");
+      setGameState('CONNECTING');
+    } else if (errorMessage.includes("Transaction simulation failed")) {
+      // General simulation failure
+      alert("❌ Transaction Failed\n\nThe transaction could not be completed. This might be due to:\n• Insufficient SOL balance\n• Network issues\n• Wallet configuration\n\nPlease check your wallet and try again.");
+      setGameState('CONNECTING');
+    } else {
+      // Other errors
+      alert("❌ Error creating profile:\n\n" + errorMessage);
+      setGameState('CONNECTING');
     }
   };
+
+  const handleBackToMenu = () => {
+    setGameState('CONNECTING');
+    // Reset states when going back
+    setUserExists(false);
+    setProfileExists(false);
+  };
+
+  // Main render logic
+  if (gameState === 'PLAYING') {
+    return (
+      <UnityGame 
+        onBackToMenu={handleBackToMenu}
+        walletAddress={solanaWallet.address || ''}
+      />
+    );
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8">
-      <div className="w-full max-w-4xl">
-        <h1 className="text-4xl font-bold text-center mb-8">Honeycomb Integration</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="flex flex-col items-center mb-8">
+          <Image src="/images/logo.svg" alt="SolMechs Logo" width={100} height={100} className="w-full h-full" /> 
+        </div>
+        </div>
 
-        {projectAddress && (
-          <div className="mb-6 p-4 bg-green-100 rounded">
-            <h3 className="font-bold text-green-800">Project Address:</h3>
-            <p className="text-sm text-green-700 font-mono">{projectAddress}</p>
+        {/* Wallet Connection Status */}
+        <div className="mb-6 p-8 h-[80%] flex flex-col items-center justify-center lg:w-[50vw] md:w-[80vw] w-[300px] bg-contain bg-center bg-no-repeat" style={{backgroundImage: "url('/images/frame.png')", minHeight: '550px'}}>
+          {!user?.isAuthenticated ? (
+            <div className="text-center flex flex-col items-center">
+              <div className="text-4xl mb-4">
+                <Image src="/images/connect_logo.png" alt="Link" width={100} height={100} className="w-[40px] h-[40px]" /> 
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Welcome to SolMechs</h2>
+              <p className="text-gray-300 mb-4">Sign in to start playing</p>
+              <div className="flex justify-center relative">
+                {/* Custom button overlay */}
+                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
+                  <Image 
+                    src="/images/Button1.png" 
+                    alt="Sign In" 
+                    width={200} 
+                    height={60} 
+                    className="w-auto h-auto"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none font-mek">
+                    SIGN IN 
+                  </span>
+                </div>
+                {/* Hidden actual SignInButton positioned behind */}
+                <SignInButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
+              </div>
+            </div>
+          ) : solanaWallet.address ? (
+            <div className="text-center">
+              <div className="text-4xl mb-4">✅</div>
+              <h2 className="text-xl font-bold text-green-400 mb-2">Wallet Ready</h2>
+              <p className="text-gray-300 text-sm font-mono">
+                {solanaWallet.address.slice(0, 8)}...{solanaWallet.address.slice(-8)}
+              </p>
+              <div className="mt-3 flex gap-2 justify-center relative">
+                {/* Custom button overlay */}
+                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
+                  <Image 
+                    src="/images/Button1.png" 
+                    alt="Sign Out" 
+                    width={160} 
+                    height={50} 
+                    className="w-auto h-auto"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none">
+                    SIGN OUT
+                  </span>
+                </div>
+                {/* Hidden actual SignOutButton positioned behind */}
+                <SignOutButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="animate-spin text-4xl mb-4">⚙️</div>
+              <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Account</h2>
+              <p className="text-gray-300">Please wait while we prepare your wallet...</p>
+            </div>
+          )}
+          {/* </Frame> */}
+
+        {/* Game State Handling */}
+        {user?.isAuthenticated && (
+          <div>
+            {gameState === 'CHECKING_USER' && (
+              <div className="text-center">
+                <div className="animate-spin text-4xl mb-4">⚙️</div>
+                <h2 className="text-xl font-bold text-white mb-2">Checking Your Account...</h2>
+                <p className="text-gray-300">Verifying your account status</p>
+              </div>
+            )}
+
+            {gameState === 'CREATING_WALLET' && (
+              <div className="text-center mt-10">
+                <div className="animate-spin text-4xl mb-4">⚙️</div>
+                <h2 className="text-xl font-bold text-white mb-2">Creating Your Wallet...</h2>
+                <p className="text-gray-300">Setting up your embedded Solana wallet</p>
+              </div>
+            )}
+
+            {gameState === 'CREATING_PROFILE' && (
+              <div className="text-center">
+                {/* <div className="animate-spin text-4xl mb-4">⚙️</div> */}
+                <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Profile...</h2>
+                <p className="text-gray-300 mb-4">
+                  {userExists 
+                    ? 'Creating your game profile' 
+                    : 'Creating your account and profile'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  Please confirm the transaction in your wallet
+                </p>
+              </div>
+            )}
           </div>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {/* Step 1: Create Project */}
-          <div className="p-6 border rounded-lg">
-            <h2 className="text-xl font-bold mb-3">1. Create Project</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              First step: Create a Honeycomb project
-            </p>
-            <button
-              onClick={createProject}
-              disabled={!wallet.publicKey || isLoading}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Creating..." : "Create Project"}
-            </button>
-          </div>
-
-          {/* Step 2: Create Profiles Tree */}
-          <div className="p-6 border rounded-lg">
-            <h2 className="text-xl font-bold mb-3">2. Create Profiles Tree</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Set up storage for user profiles (100K capacity)
-            </p>
-            <button
-              onClick={createProfilesTree}
-              disabled={!wallet.publicKey || !projectAddress || isLoading}
-              className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Creating..." : "Create Profiles Tree"}
-            </button>
-          </div>
-
-          {/* Step 3: Create User Only */}
-          <div className="p-6 border rounded-lg">
-            <h2 className="text-xl font-bold mb-3">3. Create User</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Create a universal user account
-            </p>
-            <button
-              onClick={createUser}
-              disabled={!wallet.publicKey || isLoading}
-              className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Creating..." : "Create User"}
-            </button>
-          </div>
-
-          {/* Step 4: Create User + Profile */}
-          <div className="p-6 border rounded-lg">
-            <h2 className="text-xl font-bold mb-3">4. Create User + Profile</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Create user and project profile in one transaction
-            </p>
-            <button
-              onClick={createUserWithProfile}
-              disabled={!wallet.publicKey || !projectAddress || isLoading}
-              className="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Creating..." : "Create User + Profile"}
-            </button>
-          </div>
-        </div>
-
-        {/* Verification Section */}
-        <div className="mb-8 p-6 bg-gray-800 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">🔍 Verification & Queries</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={checkUserExists}
-              disabled={!wallet.publicKey || isLoading}
-              className="px-4 py-2 bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Checking..." : "Check User Exists"}
-            </button>
-
-            <button
-              onClick={checkUserProfile}
-              disabled={!wallet.publicKey || !projectAddress || isLoading}
-              className="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Checking..." : "Check Profile Exists"}
-            </button>
-
-            <button
-              onClick={getAllProjects}
-              disabled={!wallet.publicKey || isLoading}
-              className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:bg-gray-400"
-            >
-              {isLoading ? "Getting..." : "Get My Projects"}
-            </button>
-          </div>
-        </div>
-
-        {response && (
-          <div className="mt-8 p-6 bg-gray-700 rounded-lg">
-            <h3 className="font-bold text-lg mb-3">Latest Transaction Result:</h3>
-            <pre className="text-xs overflow-auto bg-gray-600 p-4 rounded border max-h-96">
-              {JSON.stringify(response, null, 2)}
-            </pre>
-          </div>
-        )}
-
-        <div className="mt-8 p-6 bg-gray-500 rounded-lg">
-          <h3 className="font-bold text-lg mb-3">Setup Flow:</h3>
-          <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li><strong>Create Project</strong> - Sets up your Honeycomb project</li>
-            <li><strong>Create Profiles Tree</strong> - Sets up compressed storage for user profiles</li>
-            <li><strong>Create User</strong> - Creates universal user account (one per person)</li>
-            <li><strong>Create User + Profile</strong> - Alternative: Creates both user and project-specific profile in one transaction</li>
-          </ol>
-        </div>
-      </div>
+</div>
     </main>
-  )
+  );
 }
