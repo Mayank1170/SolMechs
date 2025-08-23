@@ -131,6 +131,11 @@ public class BattleManager : MonoBehaviour
         }
 
         uiManager.LogMessage($"{playerUnit.Name} used {selectedAttack?.attackName ?? "Attack"} on itself ({targetSlot}).");
+
+        // NEW (Attack FX): play the attack effect for self-target moves (player side)
+        if (selectedAttack != null)
+            uiManager.PlayAttackFx(true, selectedSourceSlot, selectedAttack.attackName);
+
         ApplyEffect(playerUnit, playerUnit, targetSlot, selectedAttack);
         uiManager.UpdateHealthBars(playerUnit, targetSlot, GetCurrentHP(playerUnit, targetSlot), playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
         currentState = BattleState.EnemyTurn;
@@ -147,6 +152,10 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
+        // NEW (Attack FX): play the attack effect for player attacking enemy
+        if (selectedAttack != null)
+            uiManager.PlayAttackFx(true, selectedSourceSlot, selectedAttack.attackName);
+
         int damage = CalculateDamage(selectedAttack, playerUnit, enemyUnit, targetSlot, selectedSourceSlot);
         int maxHP = enemyMaxHPs.ContainsKey(targetSlot) ? enemyMaxHPs[targetSlot] : 1;
         float damagePercent = (damage / (float)maxHP) * 100f;
@@ -162,6 +171,7 @@ public class BattleManager : MonoBehaviour
         {
             uiManager.LogMessage($"{enemyUnit.Name}'s {targetSlot} is no longer combat-ready!");
             ResetBuffStages(enemyUnit, targetSlot);
+            HandlePartDestroyed(enemyUnit, /*isPlayer*/ false, targetSlot); // already existed
         }
 
         // Condition 1: Matrix destroyed
@@ -222,6 +232,10 @@ public class BattleManager : MonoBehaviour
             }
             ModuleSlot selfTarget = selfOptions[UnityEngine.Random.Range(0, selfOptions.Count)];
             uiManager.LogMessage($"{enemyUnit.Name} used {attack.attackName} on itself ({selfTarget}).");
+
+            // NEW (Attack FX): enemy casting a self-target move
+            uiManager.PlayAttackFx(false, chosenSlot, attack.attackName);
+
             ApplyEffect(enemyUnit, enemyUnit, selfTarget, attack);
             uiManager.UpdateHealthBars(enemyUnit, selfTarget, GetCurrentHP(enemyUnit, selfTarget), playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
         }
@@ -230,6 +244,9 @@ public class BattleManager : MonoBehaviour
             var target = ChooseTargetSlot(playerUnit, attack);
             if (target == ModuleSlot.Matrix && !playerUnit.CanAttackMatrix())
                 target = ModuleSlot.LowerBody;
+
+            // NEW (Attack FX): enemy attacking the player
+            uiManager.PlayAttackFx(false, chosenSlot, attack.attackName);
 
             int damage = CalculateDamage(attack, enemyUnit, playerUnit, target, chosenSlot);
             int maxHP = playerMaxHPs.ContainsKey(target) ? playerMaxHPs[target] : 1;
@@ -246,6 +263,7 @@ public class BattleManager : MonoBehaviour
             {
                 uiManager.LogMessage($"{playerUnit.Name}'s {target} is no longer combat-ready!");
                 ResetBuffStages(playerUnit, target);
+                HandlePartDestroyed(playerUnit, /*isPlayer*/ true, target); // already existed
             }
 
             // Condition 1: player's Matrix destroyed
@@ -356,10 +374,11 @@ public class BattleManager : MonoBehaviour
 
             int delta = isBuff ? amount : -amount;
 
-            // CHANGED: use detailed applier so zero removes the key and we can log cancellation/flip properly
             var (prevStage, newStage) = ApplyBuffStageDetailed(unit, slot, stat, delta); // NEW
 
-            // NEW: cancellation-aware logging
+            // NEW: little sparkle/smoke when a stage is applied
+            uiManager.PlayBuffDebuffFx(unit == playerUnit, slot, isBuff);
+
             if (newStage == 0)
             {
                 if (prevStage != 0)
@@ -381,7 +400,7 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        if (effect.ToLower().Contains("piercing"))
+        if (effect.ToLower().Contains("piercing")) // <<<<<< CORRIGIDO (Contains)
         {
             uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
             return;
@@ -463,14 +482,12 @@ public class BattleManager : MonoBehaviour
     }
 
     // ---------- MINIMAL CHANGE: call UI to rebuild chips ----------
-    // CHANGED: keep the original API but delegate to the detailed version, so old calls still behave and zero removes the key.
-    private void ApplyBuffStage(MechUnit unit, ModuleSlot slot, string stat, int delta) // CHANGED
+    private void ApplyBuffStage(MechUnit unit, ModuleSlot slot, string stat, int delta)
     {
-        ApplyBuffStageDetailed(unit, slot, stat, delta); // NEW: delegate to detailed
+        ApplyBuffStageDetailed(unit, slot, stat, delta);
     }
 
-    // NEW: detailed applier that also removes keys when stage becomes zero and returns (prev, now) for logging
-    private (int prev, int now) ApplyBuffStageDetailed(MechUnit unit, ModuleSlot slot, string stat, int delta) // NEW
+    private (int prev, int now) ApplyBuffStageDetailed(MechUnit unit, ModuleSlot slot, string stat, int delta)
     {
         int prev = GetBuffStage(unit, slot, stat);
         int now = Mathf.Clamp(prev + delta, -6, 6);
@@ -496,7 +513,6 @@ public class BattleManager : MonoBehaviour
         return (prev, now);
     }
 
-    // ---------- MINIMAL CHANGE: call UI to clear/rebuild chips ----------
     private void ResetBuffStages(MechUnit unit, ModuleSlot slot)
     {
         if (slot == ModuleSlot.Matrix)
@@ -514,7 +530,6 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    // -------- Win/Loss helpers --------
     private bool AllNonMatrixPartsBroken(MechUnit unit)
     {
         if (unit == null) return false;
@@ -528,10 +543,19 @@ public class BattleManager : MonoBehaviour
         if (unit == null || unit.modules == null) return false;
         foreach (var kvp in unit.modules)
         {
-            // Consider only non-matrix module slots and check if part is not broken
             if (kvp.Key != ModuleSlot.Matrix && !unit.IsPartBroken(kvp.Key))
                 return true;
         }
         return false;
+    }
+
+    // ====================== helper used earlier ======================
+    private void HandlePartDestroyed(MechUnit unit, bool isPlayer, ModuleSlot slot)
+    {
+        if (uiManager != null)
+        {
+            uiManager.PlayFxOnSlot("FX_Explosion", isPlayer, slot);
+            uiManager.SetPartDestroyedVisual(isPlayer, slot, true);
+        }
     }
 }

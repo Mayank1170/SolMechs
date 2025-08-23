@@ -633,11 +633,9 @@ public class UIManager : MonoBehaviour
         {
             if (img == keep) continue;
 
-            // If an Image has no sprite assigned, disable it to avoid a solid color quad.
             if (img.sprite == null)
                 img.enabled = false;
 
-            // Also make sure we don't accidentally tint backgrounds
             img.raycastTarget = false;
         }
     }
@@ -691,28 +689,83 @@ public class UIManager : MonoBehaviour
 
     // =========================== FX: Attack Animations ===========================
     [Header("Attack FX")]
-    public AttackFxLibrary attackFxLibrary;  // NEW: ScriptableObject mapping attackName -> UIFxPlayer prefab
+    public AttackFxLibrary attackFxLibrary;  // assign the ScriptableObject in inspector
 
     /// <summary>
-    /// NEW: Plays a pixel-art attack FX under the appropriate slot image.
-    /// fromPlayer: true if the attack comes from the player's side (left -> right).
-    /// sourceSlot: which part launched the attack (used to choose a visual anchor).
-    /// attackName: looked up in the AttackFxLibrary.
+    /// Plays an attack FX under the proper anchor (slot image).
+    /// fromPlayer: true if attack originates from the left mech (player side).
+    /// sourceSlot: which part launched (used to choose anchor image if you prefer).
+    /// attackName: used to pick prefab from the AttackFxLibrary.
     /// </summary>
-    public void PlayAttackFx(bool fromPlayer, ModuleSlot sourceSlot, string attackName) // NEW
+    public void PlayAttackFx(bool fromPlayer, ModuleSlot sourceSlot, string attackName)
     {
         if (!fxEnabled || attackFxLibrary == null) return;
         var prefab = attackFxLibrary.Get(attackName);
         if (prefab == null) return;
 
-        // Pick a visual anchor. Using the launching slot's image is readable; fallback to Matrix.
         Image anchorImg = fromPlayer ? GetPlayerImageFor(sourceSlot) : GetEnemyImageFor(sourceSlot);
         if (anchorImg == null) anchorImg = fromPlayer ? playerMatrixImg : enemyMatrixImg;
 
-        Transform parent = anchorImg ? anchorImg.transform : this.transform;
-        bool leftToRight = fromPlayer; // enemy -> player will flip inside UIFxPlayer
+        var parent = anchorImg ? anchorImg.transform : this.transform;
+        bool leftToRight = fromPlayer; // player→enemy: true ; enemy→player: false
 
         var fx = Instantiate(prefab);
         fx.PlayUnder(parent, leftToRight);
+    }
+
+    // =========================== NEW: Buff/Debuff FX & Destroyed Visual ===========================
+    [Header("Destroyed Parts Visual")]
+    [Range(0f, 1f)] public float destroyedAlpha = 0.35f;  // set in Inspector
+    [Range(0f, 1f)] public float normalAlpha = 1f;        // set in Inspector
+
+    [Header("Buff/Debuff FX (by name in library)")]
+    public string defaultBuffFxAttackName = "Fortify";    // change to a name that exista na sua AttackFxLibrary
+    public string defaultDebuffFxAttackName = "Fortify";  // pode usar o mesmo até ter um específico
+
+    /// <summary>
+    /// Applies a simple transparency change on a part image when destroyed/recovered.
+    /// </summary>
+    public void SetPartDestroyedVisual(bool isPlayer, ModuleSlot slot, bool destroyed)
+    {
+        Image img = isPlayer ? GetPlayerImageFor(slot) : GetEnemyImageFor(slot);
+        if (!img) return;
+        var c = img.color;
+        c.a = destroyed ? Mathf.Clamp01(destroyedAlpha) : Mathf.Clamp01(normalAlpha);
+        img.color = c;
+    }
+
+    /// <summary>
+    /// Convenience: trigger an FX anchored on a specific slot by attackName/key from library.
+    /// </summary>
+    public void PlayFxOnSlot(string attackNameOrKey, bool isPlayer, ModuleSlot slot)
+    {
+        if (!fxEnabled || attackFxLibrary == null) return;
+        var prefab = attackFxLibrary.Get(attackNameOrKey);
+        if (prefab == null) return;
+
+        Image anchorImg = isPlayer ? GetPlayerImageFor(slot) : GetEnemyImageFor(slot);
+        if (anchorImg == null) anchorImg = isPlayer ? playerMatrixImg : enemyMatrixImg;
+
+        var fx = Instantiate(prefab);
+        fx.PlayUnder(anchorImg ? anchorImg.transform : transform, isPlayer);
+    }
+
+    /// <summary>
+    /// Generic buff/debuff sparkle: chooses a prefab name from the library depending on the flag.
+    /// </summary>
+    public void PlayBuffDebuffFx(bool isPlayer, ModuleSlot slot, bool isBuff)
+    {
+        if (!fxEnabled || attackFxLibrary == null) return;
+        string key = isBuff ? defaultBuffFxAttackName : defaultDebuffFxAttackName;
+        if (string.IsNullOrEmpty(key)) return;
+
+        var prefab = attackFxLibrary.Get(key);
+        if (prefab == null) return;
+
+        Image anchorImg = isPlayer ? GetPlayerImageFor(slot) : GetEnemyImageFor(slot);
+        if (anchorImg == null) anchorImg = isPlayer ? playerMatrixImg : enemyMatrixImg;
+
+        var fx = Instantiate(prefab);
+        fx.PlayUnder(anchorImg ? anchorImg.transform : transform, isPlayer);
     }
 }

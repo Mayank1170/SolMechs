@@ -3212,7 +3212,7 @@ MonoBehaviour:
   battleRoot: {fileID: 0}
   floatingTextPrefab: {fileID: 0}
   hpTweenDuration: 0.2
-  flashDuration: 0.08
+  flashDuration: 0.2
   shakeAmplitude: 6
   shakeDuration: 0.15
   damageColor: {r: 1, g: 0.35, b: 0.35, a: 1}
@@ -3238,6 +3238,7 @@ MonoBehaviour:
   enemyLowerBuffs: {fileID: 1559450372}
   buffColor: {r: 0.08, g: 0.95, b: 0.59, a: 1}
   debuffColor: {r: 0.86, g: 0.12, b: 1, a: 1}
+  destroyedAlpha: 0.35
   attackFxLibrary: {fileID: 11400000, guid: c1c2e4ea278fe2c43b03622de6d38de9, type: 2}
 --- !u!1 &779630014
 GameObject:
