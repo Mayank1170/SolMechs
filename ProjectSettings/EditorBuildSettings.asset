@@ -15,8 +15,8 @@ EditorBuildSettings:
     path: Assets/Scenes/3_PilotMechBattleV1.unity
     guid: a5d2756cec3de704ca5fda5a12f29765
   - enabled: 1
-    path: Assets/Scenes/5_PostBattle.unity
-    guid: 0654d6a908eaa274d91b22e33130735f
+    path: Assets/Scenes/4_PlayPvP.unity
+    guid: 12f313ae7b26c0a4694d558d87a19f45
   - enabled: 0
     path: Assets/Scenes/ComingSoon.unity
     guid: 80c4d9cd297341b4eb85f0c3192bf32b
@@ -24,6 +24,9 @@ EditorBuildSettings:
     path: Assets/Scenes/2_MechEditorScene.unity
     guid: a3d99b583f7894c4e865c99ec7bc79ba
   - enabled: 1
-    path: Assets/Scenes/4_PlayPvP.unity
-    guid: 12f313ae7b26c0a4694d558d87a19f45
+    path: Assets/Scenes/5_PostBattle.unity
+    guid: 0654d6a908eaa274d91b22e33130735f
+  - enabled: 1
+    path: Assets/Scenes/6_LocalPvP.unity
+    guid: befdc951599a82a44a609e1e78d5c547
   m_configObjects: {}

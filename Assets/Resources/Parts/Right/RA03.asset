@@ -42,3 +42,4 @@ MonoBehaviour:
     SPD: 10
 
     move: Pulse Burst|55|Energy|Single'
+  editorSprite: {fileID: 21300000, guid: 16ad193b70ade2c4e9deb63366fc1f83, type: 3}

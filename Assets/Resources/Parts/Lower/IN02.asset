@@ -29,4 +29,4 @@ MonoBehaviour:
     targetType: 1
     effect: +1 ATK
   rawData: 
-  editorSprite: {fileID: 21300000, guid: c5fc7147a1973d74194020d8eba6630c, type: 3}
+  editorSprite: {fileID: 21300000, guid: 219123af44b08f847a922f498cd80cd7, type: 3}

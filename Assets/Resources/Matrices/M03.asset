@@ -24,3 +24,4 @@ MonoBehaviour:
     PROC: 60
   passive1: Residual Energy
   passive2: First Shot
+  editorSprite: {fileID: 21300000, guid: 8134fdad3f202c943b749822df360e18, type: 3}

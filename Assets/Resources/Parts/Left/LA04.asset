@@ -34,3 +34,4 @@ MonoBehaviour:
     targetType: 1
     effect: +30HP
   rawData: 
+  editorSprite: {fileID: 21300000, guid: c31a4f6897b2b8049b19d6962a87a914, type: 3}

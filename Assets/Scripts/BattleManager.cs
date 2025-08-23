@@ -21,6 +21,9 @@ public class BattleManager : MonoBehaviour
     private enum BattleState { SelectingAttack, SelectingTarget, SelectingSelfTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState;
 
+    // NEW: battle-over guard to avoid double endings or late invokes
+    private bool battleOver = false;
+
     // Bootstrap
     private void Start()
     {
@@ -39,10 +42,10 @@ public class BattleManager : MonoBehaviour
         uiManager.DisableSliderInteractabilityAndHandles();
         uiManager.InitializeHealthBars(playerUnit, enemyUnit, playerMaxHPs, enemyMaxHPs);
 
-        // set the sprites for both sides from the loaders
+        // Set the sprites for both sides from the loaders
         uiManager.InitializePaperDolls(playerLoader, enemyLoader);
 
-        // IMPORTANT: não chamar HideBattleResult() aqui — o GO está desativado por padrão
+        // IMPORTANT: do NOT call HideBattleResult() here — panel GO is disabled by default
 
         StartTurn();
     }
@@ -76,7 +79,9 @@ public class BattleManager : MonoBehaviour
 
     public void StartTurn()
     {
-        // NOVO: se o jogador não pode atacar (3 partes quebradas / sem módulos utilizáveis) → derrota imediata
+        if (battleOver) return;
+
+        // NEW: if player has no usable modules (3 broken parts / no actions) → immediate defeat
         if (!HasAnyUsableModule(playerUnit) || AllNonMatrixPartsBroken(playerUnit))
         {
             uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
@@ -159,7 +164,7 @@ public class BattleManager : MonoBehaviour
             ResetBuffStages(enemyUnit, targetSlot);
         }
 
-        // Condição 1: Matrix destruída
+        // Condition 1: Matrix destroyed
         if (enemyUnit.matrixHP <= 0)
         {
             uiManager.LogMessage($"{enemyUnit.Name}'s Matrix was destroyed!\n{playerUnit.Name} wins!");
@@ -168,7 +173,7 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // NOVO – Condição 2: 3 partes destruídas / não consegue mais atacar
+        // NEW – Condition 2: three parts destroyed / cannot act
         if (AllNonMatrixPartsBroken(enemyUnit) || !HasAnyUsableModule(enemyUnit))
         {
             uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
@@ -183,10 +188,11 @@ public class BattleManager : MonoBehaviour
 
     public void EnemyTurn()
     {
+        if (battleOver) return;
         if (currentState != BattleState.EnemyTurn) return;
         if (enemyUnit == null) return;
 
-        // Se o inimigo não pode atacar, vitória do player
+        // If enemy cannot act, player wins
         var validModules = new List<ModuleSlot>();
         foreach (var kvp in enemyUnit.modules)
             if (!enemyUnit.IsPartBroken(kvp.Key)) validModules.Add(kvp.Key);
@@ -242,7 +248,7 @@ public class BattleManager : MonoBehaviour
                 ResetBuffStages(playerUnit, target);
             }
 
-            // Condição 1: Matrix do player destruída
+            // Condition 1: player's Matrix destroyed
             if (playerUnit.matrixHP <= 0)
             {
                 uiManager.LogMessage($"{playerUnit.Name}'s Matrix was destroyed!\n{enemyUnit.Name} wins!");
@@ -251,7 +257,7 @@ public class BattleManager : MonoBehaviour
                 return;
             }
 
-            // NOVO – Condição 2: 3 partes do player destruídas / sem módulos
+            // NEW – Condition 2: three parts destroyed / no modules
             if (AllNonMatrixPartsBroken(playerUnit) || !HasAnyUsableModule(playerUnit))
             {
                 uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
@@ -266,11 +272,21 @@ public class BattleManager : MonoBehaviour
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
 
-    private void TriggerEnemyTurn() { Invoke(nameof(EnemyTurn), 1f); }
+    private void TriggerEnemyTurn()
+    {
+        if (battleOver) return;
+        Invoke(nameof(EnemyTurn), 1f);
+    }
 
-    // UPDATED: show result panel
+    // UPDATED: show result panel + guard
     private void EndBattle(bool playerWon)
     {
+        if (battleOver) return;
+        battleOver = true;
+
+        // Ensure no pending enemy turns fire after the battle is over
+        CancelInvoke(nameof(EnemyTurn));
+
         uiManager.DisableAllButtons();
         uiManager.ShowBattleResult(playerWon, 0);
     }
@@ -339,11 +355,29 @@ public class BattleManager : MonoBehaviour
             else return;
 
             int delta = isBuff ? amount : -amount;
-            ApplyBuffStage(unit, slot, stat, delta);
 
-            int finalStage = GetBuffStage(unit, slot, stat);
-            string direction = finalStage > 0 ? "increased" : (finalStage < 0 ? "decreased" : "reset");
-            uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {direction} to stage {finalStage}.");
+            // CHANGED: use detailed applier so zero removes the key and we can log cancellation/flip properly
+            var (prevStage, newStage) = ApplyBuffStageDetailed(unit, slot, stat, delta); // NEW
+
+            // NEW: cancellation-aware logging
+            if (newStage == 0)
+            {
+                if (prevStage != 0)
+                    uiManager.LogMessage($"{unit.Name}'s {slot} {stat} returned to normal.");
+                else
+                    uiManager.LogMessage($"{unit.Name}'s {slot} {stat} remains normal.");
+            }
+            else
+            {
+                bool flipped = (Mathf.Sign(prevStage) != Mathf.Sign(newStage)) && prevStage != 0;
+                if (flipped)
+                    uiManager.LogMessage($"{unit.Name}'s {slot} {stat} neutralized the opposite stage and moved to {newStage:+#;-#}.");
+                else
+                {
+                    string dir = newStage > 0 ? "increased" : "decreased";
+                    uiManager.LogMessage($"{unit.Name}'s {slot} {stat} {dir} to stage {newStage:+#;-#}.");
+                }
+            }
             return;
         }
 
@@ -428,34 +462,59 @@ public class BattleManager : MonoBehaviour
         return 0;
     }
 
-    private void ApplyBuffStage(MechUnit unit, ModuleSlot slot, string stat, int delta)
+    // ---------- MINIMAL CHANGE: call UI to rebuild chips ----------
+    // CHANGED: keep the original API but delegate to the detailed version, so old calls still behave and zero removes the key.
+    private void ApplyBuffStage(MechUnit unit, ModuleSlot slot, string stat, int delta) // CHANGED
     {
-        int current = GetBuffStage(unit, slot, stat);
-        int newStage = Mathf.Clamp(current + delta, -6, 6);
+        ApplyBuffStageDetailed(unit, slot, stat, delta); // NEW: delegate to detailed
+    }
+
+    // NEW: detailed applier that also removes keys when stage becomes zero and returns (prev, now) for logging
+    private (int prev, int now) ApplyBuffStageDetailed(MechUnit unit, ModuleSlot slot, string stat, int delta) // NEW
+    {
+        int prev = GetBuffStage(unit, slot, stat);
+        int now = Mathf.Clamp(prev + delta, -6, 6);
+
         if (slot == ModuleSlot.Matrix)
         {
             if (!matrixBuffsDict.ContainsKey(unit)) matrixBuffsDict[unit] = new Dictionary<string, int>();
-            matrixBuffsDict[unit][stat] = newStage;
+            if (now == 0) matrixBuffsDict[unit].Remove(stat);
+            else matrixBuffsDict[unit][stat] = now;
+
+            uiManager.SetBuffChips(unit == playerUnit, ModuleSlot.Matrix,
+                matrixBuffsDict.ContainsKey(unit) ? matrixBuffsDict[unit] : null);
         }
         else if (unit.partStatuses.ContainsKey(slot))
         {
-            unit.partStatuses[slot].buffs[stat] = newStage;
+            var dict = unit.partStatuses[slot].buffs;
+            if (now == 0) dict.Remove(stat);
+            else dict[stat] = now;
+
+            uiManager.SetBuffChips(unit == playerUnit, slot, dict);
         }
+
+        return (prev, now);
     }
 
+    // ---------- MINIMAL CHANGE: call UI to clear/rebuild chips ----------
     private void ResetBuffStages(MechUnit unit, ModuleSlot slot)
     {
         if (slot == ModuleSlot.Matrix)
         {
             if (matrixBuffsDict.ContainsKey(unit)) matrixBuffsDict[unit].Clear();
+
+            uiManager.SetBuffChips(unit == playerUnit, ModuleSlot.Matrix,
+                matrixBuffsDict.ContainsKey(unit) ? matrixBuffsDict[unit] : null);
         }
         else if (unit.partStatuses.ContainsKey(slot))
         {
             unit.partStatuses[slot].buffs.Clear();
+
+            uiManager.SetBuffChips(unit == playerUnit, slot, unit.partStatuses[slot].buffs);
         }
     }
 
-    // -------- Helpers de condição de vitória/derrota --------
+    // -------- Win/Loss helpers --------
     private bool AllNonMatrixPartsBroken(MechUnit unit)
     {
         if (unit == null) return false;

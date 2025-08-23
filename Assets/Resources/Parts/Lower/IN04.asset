@@ -29,3 +29,4 @@ MonoBehaviour:
     targetType: 1
     effect: +1 SYS
   rawData: 
+  editorSprite: {fileID: 21300000, guid: bd5d26c647e48674a868d98ca9c70bc0, type: 3}

@@ -24,3 +24,4 @@ MonoBehaviour:
     PROC: 60
   passive1: Auto-Regen
   passive2: Echo Sensor
+  editorSprite: {fileID: 21300000, guid: 3fb0f8b5e5279534284adde0abc01255, type: 3}
