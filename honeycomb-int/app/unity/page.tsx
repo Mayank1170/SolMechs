@@ -1,6 +1,5 @@
 'use client'
 
-import Script from 'next/script'
 import { useEffect, useRef } from 'react'
 
 export default function UnityPage() {
@@ -9,30 +8,54 @@ export default function UnityPage() {
   const loadingBarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const initUnity = () => {
+    const loadUnityScript = () => {
+      return new Promise<void>((resolve, reject) => {
+        // Check if already loaded
+        if (typeof (window as any).createUnityInstance !== 'undefined') {
+          resolve()
+          return
+        }
+
+        const script = document.createElement('script')
+        script.src = '/unity/Build/webgl-build.loader.js'
+        script.onload = () => {
+          console.log('✅ Unity loader script loaded successfully')
+          resolve()
+        }
+        script.onerror = (error) => {
+          console.error('❌ Failed to load Unity loader script:', error)
+          reject(error)
+        }
+        document.head.appendChild(script)
+      })
+    }
+
+    const initUnity = async () => {
       if (!canvasRef.current || !progressBarRef.current || !loadingBarRef.current) return
 
-      const canvas = canvasRef.current
-      const loadingBar = loadingBarRef.current
-      const progressBarFull = progressBarRef.current
+      try {
+        // Ensure Unity loader is available
+        await loadUnityScript()
 
-      const buildUrl = "/unity/Build"
-      const config = {
-        dataUrl: buildUrl + "/webgl-build.data",
-        frameworkUrl: buildUrl + "/webgl-build.framework.js",
-        codeUrl: buildUrl + "/webgl-build.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "MechBattle",
-        productVersion: "1.0",
-      }
+        const canvas = canvasRef.current
+        const loadingBar = loadingBarRef.current
+        const progressBarFull = progressBarRef.current
 
-      loadingBar.style.display = "block"
+        const buildUrl = "/unity/Build"
+        const config = {
+          dataUrl: buildUrl + "/webgl-build.data",
+          frameworkUrl: buildUrl + "/webgl-build.framework.js",
+          codeUrl: buildUrl + "/webgl-build.wasm",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "DefaultCompany",
+          productName: "MechBattle",
+          productVersion: "1.0",
+        }
 
-      // @ts-ignore - Unity's createUnityInstance function
-      if (typeof createUnityInstance !== 'undefined') {
-        // @ts-ignore
-        createUnityInstance(canvas, config, (progress: number) => {
+        loadingBar.style.display = "block"
+
+        // @ts-ignore - Unity's createUnityInstance function
+        ;(window as any).createUnityInstance(canvas, config, (progress: number) => {
           progressBarFull.style.width = 100 * progress + "%"
         }).then((unityInstance: any) => {
           loadingBar.style.display = "none"
@@ -94,14 +117,15 @@ export default function UnityPage() {
           console.error("PSG1 WebGL Load Error:", message)
           alert("PSG1 WebGL Load Error: " + message)
         })
-      } else {
-        console.error("createUnityInstance is not defined")
+
+      } catch (error) {
+        console.error("Failed to initialize Unity:", error)
+        alert("Failed to initialize Unity: " + error)
       }
     }
 
-    // Initialize Unity when the loader script is loaded
-    const timer = setTimeout(initUnity, 100)
-    return () => clearTimeout(timer)
+    // Initialize Unity
+    initUnity()
   }, [])
 
   return (
@@ -117,14 +141,6 @@ export default function UnityPage() {
       minHeight: "100vh",
       overflow: "hidden"
     }}>
-      <Script
-        src="/unity/Build/webgl-build.loader.js"
-        strategy="beforeInteractive"
-        onError={(e) => {
-          console.error("Failed to load Unity loader script:", e)
-        }}
-      />
-      
       <div style={{
         position: "relative",
         width: "1040px",
