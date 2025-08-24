@@ -15,22 +15,12 @@ export default function UnityPage() {
   useEffect(() => {
     const loadUnityScript = () => {
       return new Promise<void>((resolve, reject) => {
-        // Check if already loaded
-        if (typeof window !== 'undefined' && typeof (window as any).createUnityInstance === 'function') {
-          resolve()
-          return
-        }
-
+        console.log('🔄 Loading Unity loader script...')
         const script = document.createElement('script')
         script.src = '/unity/Build/webgl-build.loader.js'
         script.onload = () => {
           console.log('✅ Unity loader script loaded successfully')
-          // Double check that createUnityInstance is now available
-          if (typeof (window as any).createUnityInstance === 'function') {
-            resolve()
-          } else {
-            reject(new Error('createUnityInstance not found after loading script'))
-          }
+          resolve()
         }
         script.onerror = (error) => {
           console.error('❌ Failed to load Unity loader script:', error)
@@ -65,12 +55,8 @@ export default function UnityPage() {
         loadingBar.style.display = "block"
 
         // Use the global createUnityInstance function
-        const createUnity = (window as any).createUnityInstance
-        if (typeof createUnity !== 'function') {
-          throw new Error('createUnityInstance is not available as a function')
-        }
-        
-        createUnity(canvas, config, (progress: number) => {
+        // @ts-ignore - createUnityInstance is loaded as a global function by Unity
+        createUnityInstance(canvas, config, (progress: number) => {
           progressBarFull.style.width = 100 * progress + "%"
         }).then((unityInstance: any) => {
           loadingBar.style.display = "none"
