@@ -1,0 +1,125 @@
+/* --- Reset & fundo (barras) --- */
+:root {
+  --w: 1240;      /* largura de referência */
+  --h: 1080;      /* altura de referência  */
+  --r: calc(var(--w) / var(--h));
+  --ir: calc(var(--h) / var(--w));
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #1d1423; /* cor das barras (troque se quiser) */
+}
+
+/* --- Container principal do Unity --- */
+#unity-container {
+  position: fixed;
+  inset: 0;
+}
+
+/* Centraliza o jogo na tela em desktop e mobile */
+#unity-container.unity-desktop,
+#unity-container.unity-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* melhora em mobile Safari */
+}
+
+/* --- Caixa que fixa a proporção 1240x1080 e ocupa o máximo possível --- */
+#game-fitbox {
+  aspect-ratio: var(--w) / var(--h);
+  width:  min(100vw, calc(100vh * var(--r)));
+  height: min(100vh, calc(100vw * var(--ir)));
+}
+
+/* --- O canvas preenche a caixa proporcional --- */
+#unity-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  background: {{{ BACKGROUND_COLOR }}};
+}
+
+/* --- Barra de loading (mantida do template Default) --- */
+#unity-loading-bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+}
+
+#unity-logo {
+  width: 154px;
+  height: 130px;
+  background: url('unity-logo-{{{ SPLASH_SCREEN_STYLE.toLowerCase() }}}.png') no-repeat center;
+}
+
+#unity-progress-bar-empty {
+  width: 141px;
+  height: 18px;
+  margin-top: 10px;
+  margin-left: 6.5px;
+  background: url('progress-bar-empty-{{{ SPLASH_SCREEN_STYLE.toLowerCase() }}}.png') no-repeat center;
+}
+
+#unity-progress-bar-full {
+  width: 0%;
+  height: 18px;
+  margin-top: 10px;
+  background: url('progress-bar-full-{{{ SPLASH_SCREEN_STYLE.toLowerCase() }}}.png') no-repeat center;
+}
+
+/* --- Rodapé (opcional) --- */
+#unity-footer { position: relative; }
+.unity-mobile #unity-footer { display: none; }
+
+#unity-webgl-logo {
+  float: left;
+  width: 204px;
+  height: 38px;
+  background: url('webgl-logo.png') no-repeat center;
+}
+
+#unity-build-title {
+  float: right;
+  margin-right: 10px;
+  line-height: 38px;
+  font-family: arial, sans-serif;
+  font-size: 18px;
+}
+
+#unity-fullscreen-button {
+  float: right;
+  width: 38px;
+  height: 38px;
+  background: url('fullscreen-button.png') no-repeat center;
+}
+
+/* --- Avisos do Unity --- */
+#unity-warning {
+  position: absolute;
+  left: 50%;
+  top: 5%;
+  transform: translate(-50%);
+  background: white;
+  padding: 10px;
+  display: none;
+}
+
+/* --- Melhorias pequenas para mobile notch --- */
+@supports (padding: env(safe-area-inset-top)) {
+  html, body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}

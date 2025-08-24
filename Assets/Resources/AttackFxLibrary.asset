@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: AttackFxLibrary
   m_EditorClassIdentifier: 
   items:
-  - attackName: 
-    prefab: {fileID: 0}
+  - attackName: FX_Explosion
+    prefab: {fileID: 6557074501073483244, guid: cbe00d313f9123149b6b40d027034f2c, type: 3}
   - attackName: 
     prefab: {fileID: 0}
   - attackName: 
