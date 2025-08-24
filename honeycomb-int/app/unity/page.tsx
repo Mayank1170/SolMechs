@@ -15,17 +15,85 @@ export default function UnityPage() {
   useEffect(() => {
     const loadUnityScript = () => {
       return new Promise<void>((resolve, reject) => {
+        // Check if already loaded
+        if (typeof (window as any).createUnityInstance === 'function' || 
+            typeof createUnityInstance !== 'undefined') {
+          console.log('✅ createUnityInstance already available')
+          resolve()
+          return
+        }
+
         console.log('🔄 Loading Unity loader script...')
+        console.log('🌐 Current URL:', window.location.href)
+        console.log('🗂️ Script path:', '/unity/Build/webgl-build.loader.js')
+        
         const script = document.createElement('script')
-        script.src = '/unity/Build/webgl-build.loader.js'
+        // Use absolute URL in production to ensure it loads correctly
+        const isProduction = window.location.hostname !== 'localhost' && 
+                            window.location.hostname !== '127.0.0.1'
+        
+        const scriptSrc = isProduction 
+          ? `${window.location.origin}/unity/Build/webgl-build.loader.js`
+          : '/unity/Build/webgl-build.loader.js'
+        
+        console.log('🔗 Using script source:', scriptSrc)
+        script.src = scriptSrc
+        
+        // Add script attributes for better loading
+        script.async = false
+        script.defer = false
+        script.crossOrigin = 'anonymous'
+        
         script.onload = () => {
           console.log('✅ Unity loader script loaded successfully')
-          resolve()
+          
+          // Wait a bit for script execution and check multiple ways
+          setTimeout(() => {
+            console.log('🔍 Checking for createUnityInstance availability...')
+            console.log('- window.createUnityInstance:', typeof (window as any).createUnityInstance)
+            console.log('- global createUnityInstance:', typeof (window as any).createUnityInstance)
+            
+            // Try to access the function
+            try {
+              if (typeof createUnityInstance !== 'undefined') {
+                console.log('✅ Found createUnityInstance in global scope')
+                resolve()
+              } else if (typeof (window as any).createUnityInstance === 'function') {
+                console.log('✅ Found createUnityInstance on window')
+                resolve()
+              } else {
+                console.error('❌ createUnityInstance not found after script load')
+                console.log('Available globals:', Object.keys(window).filter(k => k.includes('Unity') || k.includes('create')))
+                reject(new Error('createUnityInstance not available after script load'))
+              }
+            } catch (e) {
+              console.error('❌ Error checking createUnityInstance:', e)
+              reject(e)
+            }
+          }, 200) // Increased timeout for production
         }
+        
         script.onerror = (error) => {
           console.error('❌ Failed to load Unity loader script:', error)
-          reject(error)
+          console.log('🔍 Attempting to fetch script directly to check if it exists...')
+          
+          // Try to fetch the script to see if it exists
+          fetch('/unity/Build/webgl-build.loader.js')
+            .then(response => {
+              console.log('📄 Script fetch response:', response.status, response.statusText)
+              if (!response.ok) {
+                reject(new Error(`Script not found: ${response.status} ${response.statusText}`))
+              } else {
+                reject(new Error('Script exists but failed to load'))
+              }
+            })
+            .catch(fetchError => {
+              console.error('❌ Script fetch failed:', fetchError)
+              reject(new Error(`Script not accessible: ${fetchError.message}`))
+            })
         }
+        
+        console.log('📤 Appending script to head...')
         document.head.appendChild(script)
       })
     }
@@ -41,7 +109,14 @@ export default function UnityPage() {
         const loadingBar = loadingBarRef.current
         const progressBarFull = progressBarRef.current
 
-        const buildUrl = "/unity/Build"
+        // Use absolute URLs in production to ensure assets load correctly
+        const isProduction = window.location.hostname !== 'localhost' && 
+                            window.location.hostname !== '127.0.0.1'
+        
+        const buildUrl = isProduction
+          ? `${window.location.origin}/unity/Build`
+          : "/unity/Build"
+        
         const config = {
           dataUrl: buildUrl + "/webgl-build.data",
           frameworkUrl: buildUrl + "/webgl-build.framework.js",
@@ -51,10 +126,23 @@ export default function UnityPage() {
           productName: "MechBattle",
           productVersion: "1.0",
         }
+        
+        console.log('🔧 Unity build URL:', buildUrl)
 
         loadingBar.style.display = "block"
 
         // Use the global createUnityInstance function
+        console.log('🎮 Initializing Unity instance...')
+        console.log('🖼️ Canvas element:', canvas)
+        console.log('⚙️ Unity config:', config)
+        
+        // Double check that createUnityInstance is available
+        if (typeof createUnityInstance === 'undefined') {
+          throw new Error('createUnityInstance is not defined at initialization time')
+        }
+        
+        console.log('✅ createUnityInstance confirmed available, starting Unity...')
+        
         // @ts-ignore - createUnityInstance is loaded as a global function by Unity
         createUnityInstance(canvas, config, (progress: number) => {
           progressBarFull.style.width = 100 * progress + "%"

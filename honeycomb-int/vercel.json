@@ -3,22 +3,61 @@
   "outputDirectory": ".next",
   "headers": [
     {
-      "source": "/unity/Build/(.*)",
+      "source": "/unity/Build/webgl-build.wasm",
       "headers": [
-        {
-          "key": "Content-Encoding",
-          "value": "gzip"
-        },
         {
           "key": "Content-Type", 
           "value": "application/wasm"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/unity/Build/webgl-build.data",
+      "headers": [
+        {
+          "key": "Content-Type", 
+          "value": "application/octet-stream"
+        }
+      ]
+    },
+    {
+      "source": "/unity/Build/webgl-build.loader.js",
+      "headers": [
+        {
+          "key": "Content-Type", 
+          "value": "application/javascript"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/unity/Build/webgl-build.framework.js",
+      "headers": [
+        {
+          "key": "Content-Type", 
+          "value": "application/javascript"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!unity|_next|api|favicon.ico).*)",
       "destination": "/"
     }
   ]
