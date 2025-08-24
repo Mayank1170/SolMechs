@@ -2,6 +2,11 @@
 
 import { useEffect, useRef } from 'react'
 
+// Declare Unity global function
+declare global {
+  function createUnityInstance(canvas: HTMLCanvasElement, config: any, onProgress?: (progress: number) => void): Promise<any>
+}
+
 export default function UnityPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
@@ -11,7 +16,7 @@ export default function UnityPage() {
     const loadUnityScript = () => {
       return new Promise<void>((resolve, reject) => {
         // Check if already loaded
-        if (typeof (window as any).createUnityInstance !== 'undefined') {
+        if (typeof window !== 'undefined' && typeof (window as any).createUnityInstance === 'function') {
           resolve()
           return
         }
@@ -20,7 +25,12 @@ export default function UnityPage() {
         script.src = '/unity/Build/webgl-build.loader.js'
         script.onload = () => {
           console.log('✅ Unity loader script loaded successfully')
-          resolve()
+          // Double check that createUnityInstance is now available
+          if (typeof (window as any).createUnityInstance === 'function') {
+            resolve()
+          } else {
+            reject(new Error('createUnityInstance not found after loading script'))
+          }
         }
         script.onerror = (error) => {
           console.error('❌ Failed to load Unity loader script:', error)
@@ -54,8 +64,13 @@ export default function UnityPage() {
 
         loadingBar.style.display = "block"
 
-        // @ts-ignore - Unity's createUnityInstance function
-        ;(window as any).createUnityInstance(canvas, config, (progress: number) => {
+        // Use the global createUnityInstance function
+        const createUnity = (window as any).createUnityInstance
+        if (typeof createUnity !== 'function') {
+          throw new Error('createUnityInstance is not available as a function')
+        }
+        
+        createUnity(canvas, config, (progress: number) => {
           progressBarFull.style.width = 100 * progress + "%"
         }).then((unityInstance: any) => {
           loadingBar.style.display = "none"
