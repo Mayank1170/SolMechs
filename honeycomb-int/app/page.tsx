@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client, PROJECT_ADDRESS } from "../constants/client";
+import { autoAirdropSol } from "../utils/airdrop";
 import Image from "next/image";
 import UnityGame from "../components/UnityGame";
 
@@ -18,8 +19,6 @@ export default function Home() {
   const [userExists, setUserExists] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
-
-
   // Main flow logic when user authentication status changes
   useEffect(() => {
     const handleUserFlow = async () => {
@@ -51,11 +50,11 @@ export default function Home() {
     try {
       // For new users or users without wallets, auto-create wallet
       if ('createWallet' in user) {
-        console.log("🆕 New user detected - auto-creating wallet...");
+        // console.log("🆕 New user detected - auto-creating wallet...");
         await autoCreateWallet();
       } else {
         // This shouldn't normally happen, but handle gracefully
-        console.log("❌ Cannot create wallet for this user");
+        // console.log("❌ Cannot create wallet for this user");
         alert("Wallet creation not available. Please try again or contact support.");
         setGameState('CONNECTING');
       }
@@ -75,11 +74,19 @@ export default function Home() {
     setGameState('CREATING_WALLET');
     
     try {
-      console.log("🏛️ Creating Civic wallet automatically...");
+      // console.log("🏛️ Creating Civic wallet automatically...");
       await user.createWallet();
-      console.log("✅ Civic wallet created successfully");
+      // console.log("✅ Civic wallet created successfully");
       
-      // Wallet is now available, the useEffect will trigger checkUserAndProfile
+      // Wait a moment for wallet to be available, then silently check balance
+      setTimeout(async () => {
+        if (solanaWallet.address) {
+          // Silent background balance maintenance
+          autoAirdropSol(solanaWallet.address);
+          checkUserAndProfile();
+        }
+      }, 1000);
+      
     } catch (error) {
       console.error("❌ Error creating Civic wallet:", error);
       alert("Failed to create wallet automatically. Please try again.");
@@ -89,6 +96,7 @@ export default function Home() {
     }
   };
 
+
   const checkUserAndProfile = async () => {
     // Get address from Civic Solana wallet
     if (!solanaWallet.address) return;
@@ -97,6 +105,9 @@ export default function Home() {
     setGameState('CHECKING_USER');
     
     try {
+      // Silent background balance maintenance for existing wallets
+      autoAirdropSol(solanaWallet.address);
+
       // Check if user exists
       const usersResult = await client.findUsers({
         wallets: [solanaWallet.address]
@@ -105,7 +116,7 @@ export default function Home() {
       
       if (honeycombUser) {
         setUserExists(true);
-        console.log("✅ User exists:", honeycombUser);
+        //  console.log("✅ User exists:", honeycombUser);
         
         // Check if user has profile for this project
         const profilesResult = await client.findProfiles({
@@ -117,11 +128,11 @@ export default function Home() {
         if (profile) {
           setProfileExists(true);
           setGameState('PLAYING');
-          console.log("✅ User profile exists - redirecting to game:", profile);
+          // console.log("✅ User profile exists - redirecting to game:", profile);
         } else {
           setProfileExists(false);
           setGameState('CREATING_PROFILE');
-          console.log("❌ No profile found for this project - auto-creating profile...");
+          // console.log("❌ No profile found for this project - auto-creating profile...");
           // Auto-create profile for existing user
           setTimeout(() => createProfileForExistingUser(), 100);
         }
@@ -129,7 +140,7 @@ export default function Home() {
         setUserExists(false);
         setProfileExists(false);
         setGameState('CREATING_PROFILE');
-        console.log("❌ No user found - auto-creating user and profile...");
+        // console.log("❌ No user found - auto-creating user and profile...");
         // Auto-create user and profile for new user
         setTimeout(() => createUserWithProfile(), 100);
       }
@@ -153,7 +164,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       // Create user + profile in one transaction (first time user)
-      console.log("🆕 Creating new user with profile...");
+      // console.log("🆕 Creating new user with profile...");
       const {
         createNewUserWithProfileTransaction: txResponse
       } = await client.createNewUserWithProfileTransaction({
@@ -174,7 +185,7 @@ export default function Home() {
         solanaWallet.wallet,
         txResponse
       );
-      console.log("📋 Transaction result:", result);
+      // console.log("📋 Transaction result:", result);
       
       // Check if transaction was successful
       const isSuccess = result && result.length > 0 && 
@@ -186,14 +197,14 @@ export default function Home() {
         throw new Error(errorMsg);
       }
       
-      console.log("✅ New user and profile created successfully!");
+      // console.log("✅ New user and profile created successfully!");
       
       // Only update states if transaction was successful
       setUserExists(true);
       setProfileExists(true);
       setGameState('PLAYING');
       
-      console.log("🎉 Profile creation successful! Redirecting to game...");
+      // console.log("🎉 Profile creation successful! Redirecting to game...");
       
     } catch (error) {
       console.error("❌ Error creating user with profile:", error);
@@ -212,7 +223,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       // User exists, just create profile for this project
-      console.log("👤 Creating profile for existing user...");
+      // console.log("👤 Creating profile for existing user...");
       const {
         createNewProfileTransaction: txResponse
       } = await client.createNewProfileTransaction({
@@ -227,7 +238,7 @@ export default function Home() {
         solanaWallet.wallet,
         txResponse
       );
-      console.log("📋 Transaction result:", result);
+      // console.log("📋 Transaction result:", result);
       
       // Check if transaction was successful
       const isSuccess = result && result.length > 0 && 
@@ -239,17 +250,17 @@ export default function Home() {
         throw new Error(errorMsg);
       }
       
-      console.log("✅ Profile created for existing user successfully!");
+      // console.log("✅ Profile created for existing user successfully!");
       
       // Only update states if transaction was successful
       setUserExists(true);
       setProfileExists(true);
       setGameState('PLAYING');
       
-      console.log("🎉 Profile creation successful! Redirecting to game...");
+      // console.log("🎉 Profile creation successful! Redirecting to game...");
       
     } catch (error) {
-      console.error("❌ Error creating profile for existing user:", error);
+      // console.error("❌ Error creating profile for existing user:", error);
       handleProfileCreationError(error as Error);
     } finally {
       setIsLoading(false);
@@ -261,7 +272,7 @@ export default function Home() {
     
     // Check if error is about user already having profile
     if (errorMessage.includes("User already exists with profile")) {
-      console.log("🔄 User already has profile - redirecting to game...");
+      // console.log("🔄 User already has profile - redirecting to game...");
       // Profile already exists, just go to play state
       setUserExists(true);
       setProfileExists(true);
@@ -334,13 +345,12 @@ export default function Home() {
                 <SignInButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
-          ) : solanaWallet.address ? (
+          ) : solanaWallet.address && gameState !== 'CREATING_PROFILE' ? (
             <div className="text-center">
               <div className="text-4xl mb-4">✅</div>
-              <h2 className="text-xl font-bold text-green-400 mb-2">Wallet Ready</h2>
-              <p className="text-gray-300 text-sm font-mono">
-                {solanaWallet.address.slice(0, 8)}...{solanaWallet.address.slice(-8)}
-              </p>
+              <h2 className="text-xl font-bold text-green-400 mb-2">Ready to Play</h2>
+              <p className="text-gray-300 mb-4">Your wallet is connected and ready</p>
+
               <div className="mt-3 flex gap-2 justify-center relative">
                 {/* Custom button overlay */}
                 <div className="relative hover:scale-105 transition-transform duration-200 z-10">
@@ -359,50 +369,26 @@ export default function Home() {
                 <SignOutButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
+          ) : gameState === 'CREATING_PROFILE' ? (
+            <div className="text-center">
+              <div className="animate-spin text-4xl mb-4">⚙️</div>
+              <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Profile...</h2>
+              <p className="text-gray-300 mb-4">
+                {userExists 
+                  ? 'Creating your game profile' 
+                  : 'Creating your account and profile'}
+              </p>
+              <p className="text-sm text-gray-400">
+                Please confirm the transaction in your wallet
+              </p>
+            </div>
           ) : (
             <div className="text-center">
               <div className="animate-spin text-4xl mb-4">⚙️</div>
               <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Account</h2>
-              <p className="text-gray-300">Please wait while we prepare your wallet...</p>
+              <p className="text-gray-300">Please wait while we prepare your resources...</p>
             </div>
           )}
-          {/* </Frame> */}
-
-        {/* Game State Handling */}
-        {user?.isAuthenticated && (
-          <div>
-            {gameState === 'CHECKING_USER' && (
-              <div className="text-center">
-                <div className="animate-spin text-4xl mb-4">⚙️</div>
-                <h2 className="text-xl font-bold text-white mb-2">Checking Your Account...</h2>
-                <p className="text-gray-300">Verifying your account status</p>
-              </div>
-            )}
-
-            {gameState === 'CREATING_WALLET' && (
-              <div className="text-center mt-10">
-                <div className="animate-spin text-4xl mb-4">⚙️</div>
-                <h2 className="text-xl font-bold text-white mb-2">Creating Your Wallet...</h2>
-                <p className="text-gray-300">Setting up your embedded Solana wallet</p>
-              </div>
-            )}
-
-            {gameState === 'CREATING_PROFILE' && (
-              <div className="text-center">
-                {/* <div className="animate-spin text-4xl mb-4">⚙️</div> */}
-                <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Profile...</h2>
-                <p className="text-gray-300 mb-4">
-                  {userExists 
-                    ? 'Creating your game profile' 
-                    : 'Creating your account and profile'}
-                </p>
-                <p className="text-sm text-gray-400">
-                  Please confirm the transaction in your wallet
-                </p>
-              </div>
-            )}
-          </div>
-        )}
 </div>
     </main>
   );

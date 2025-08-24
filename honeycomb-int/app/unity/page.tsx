@@ -18,14 +18,14 @@ export default function UnityPage() {
         // Check if already loaded
         if (typeof (window as any).createUnityInstance === 'function' || 
             typeof createUnityInstance !== 'undefined') {
-          console.log('✅ createUnityInstance already available')
+          // console.log('✅ createUnityInstance already available')
           resolve()
           return
         }
 
-        console.log('🔄 Loading Unity loader script...')
-        console.log('🌐 Current URL:', window.location.href)
-        console.log('🗂️ Script path:', '/unity/Build/webgl-build.loader.js')
+        // console.log('🔄 Loading Unity loader script...')
+        // console.log('🌐 Current URL:', window.location.href)
+        // console.log('🗂️ Script path:', '/unity/Build/webgl-build.loader.js')
         
         const script = document.createElement('script')
         // Use absolute URL in production to ensure it loads correctly
@@ -36,7 +36,7 @@ export default function UnityPage() {
           ? `${window.location.origin}/unity/Build/webgl-build.loader.js`
           : '/unity/Build/webgl-build.loader.js'
         
-        console.log('🔗 Using script source:', scriptSrc)
+        // console.log('🔗 Using script source:', scriptSrc)
         script.src = scriptSrc
         
         // Add script attributes for better loading
@@ -45,25 +45,25 @@ export default function UnityPage() {
         script.crossOrigin = 'anonymous'
         
         script.onload = () => {
-          console.log('✅ Unity loader script loaded successfully')
+          // console.log('✅ Unity loader script loaded successfully')
           
           // Wait a bit for script execution and check multiple ways
           setTimeout(() => {
-            console.log('🔍 Checking for createUnityInstance availability...')
-            console.log('- window.createUnityInstance:', typeof (window as any).createUnityInstance)
-            console.log('- global createUnityInstance:', typeof (window as any).createUnityInstance)
+            // console.log('🔍 Checking for createUnityInstance availability...')
+            // console.log('- window.createUnityInstance:', typeof (window as any).createUnityInstance)
+            // console.log('- global createUnityInstance:', typeof (window as any).createUnityInstance)
             
             // Try to access the function
             try {
               if (typeof createUnityInstance !== 'undefined') {
-                console.log('✅ Found createUnityInstance in global scope')
+                // console.log('✅ Found createUnityInstance in global scope')
                 resolve()
               } else if (typeof (window as any).createUnityInstance === 'function') {
-                console.log('✅ Found createUnityInstance on window')
+                // console.log('✅ Found createUnityInstance on window')
                 resolve()
               } else {
                 console.error('❌ createUnityInstance not found after script load')
-                console.log('Available globals:', Object.keys(window).filter(k => k.includes('Unity') || k.includes('create')))
+                // console.log('Available globals:', Object.keys(window).filter(k => k.includes('Unity') || k.includes('create')))
                 reject(new Error('createUnityInstance not available after script load'))
               }
             } catch (e) {
@@ -75,12 +75,12 @@ export default function UnityPage() {
         
         script.onerror = (error) => {
           console.error('❌ Failed to load Unity loader script:', error)
-          console.log('🔍 Attempting to fetch script directly to check if it exists...')
+          // console.log('🔍 Attempting to fetch script directly to check if it exists...')
           
           // Try to fetch the script to see if it exists
           fetch('/unity/Build/webgl-build.loader.js')
             .then(response => {
-              console.log('📄 Script fetch response:', response.status, response.statusText)
+              // console.log('📄 Script fetch response:', response.status, response.statusText)
               if (!response.ok) {
                 reject(new Error(`Script not found: ${response.status} ${response.statusText}`))
               } else {
@@ -93,7 +93,7 @@ export default function UnityPage() {
             })
         }
         
-        console.log('📤 Appending script to head...')
+        // console.log('📤 Appending script to head...')
         document.head.appendChild(script)
       })
     }
@@ -127,21 +127,21 @@ export default function UnityPage() {
           productVersion: "1.0",
         }
         
-        console.log('🔧 Unity build URL:', buildUrl)
+        // console.log('🔧 Unity build URL:', buildUrl)
 
         loadingBar.style.display = "block"
 
         // Use the global createUnityInstance function
-        console.log('🎮 Initializing Unity instance...')
-        console.log('🖼️ Canvas element:', canvas)
-        console.log('⚙️ Unity config:', config)
+        // console.log('🎮 Initializing Unity instance...')
+        // console.log('🖼️ Canvas element:', canvas)
+        // console.log('⚙️ Unity config:', config)
         
         // Double check that createUnityInstance is available
         if (typeof createUnityInstance === 'undefined') {
           throw new Error('createUnityInstance is not defined at initialization time')
         }
         
-        console.log('✅ createUnityInstance confirmed available, starting Unity...')
+        // // console.log('✅ createUnityInstance confirmed available, starting Unity...')
         
         // @ts-ignore - createUnityInstance is loaded as a global function by Unity
         createUnityInstance(canvas, config, (progress: number) => {
@@ -149,36 +149,36 @@ export default function UnityPage() {
         }).then((unityInstance: any) => {
           loadingBar.style.display = "none"
           
-          console.log("🎮 PSG1 WebGL Game loaded successfully!")
-          console.log("🌐 PSG1 Template active - SolMechs × Play Solana")
+          // console.log("🎮 PSG1 WebGL Game loaded successfully!")
+          // console.log("🌐 PSG1 Template active - SolMechs × Play Solana")
           
           // Make Unity instance globally available
           ;(window as any).unityInstance = unityInstance
           
           // PSG1 JavaScript Functions for Unity WebGL
           ;(window as any).GetWalletAddress = function() {
-            console.log("🔗 PSG1 Template: Unity requesting wallet address")
+            // console.log("🔗 PSG1 Template: Unity requesting wallet address")
             if ((window as any).parent && (window as any).parent.web3Bridge && (window as any).parent.web3Bridge.getWalletAddress) {
               const wallet = (window as any).parent.web3Bridge.getWalletAddress()
-              console.log(`🔗 PSG1 Template returning wallet: ${wallet}`)
+              // console.log(`🔗 PSG1 Template returning wallet: ${wallet}`)
               return wallet
             }
-            console.log("🔗 PSG1 Template returning demo wallet")
+            // console.log("🔗 PSG1 Template returning demo wallet")
             return "PSG1_DEMO_WALLET"
           }
           
           ;(window as any).GetUserBalance = function() {
-            console.log("💰 PSG1 Template: Unity requesting user balance")
+            // console.log("💰 PSG1 Template: Unity requesting user balance")
             if ((window as any).parent && (window as any).parent.web3Bridge && (window as any).parent.web3Bridge.getBalance) {
-              console.log("💰 PSG1 Template returning balance: 2000")
+              // console.log("💰 PSG1 Template returning balance: 2000")
               return "2000"
             }
-            console.log("💰 PSG1 Template returning demo balance")
+            // console.log("💰 PSG1 Template returning demo balance")
             return "1000"
           }
           
           ;(window as any).LogToJS = function(message: string) {
-            console.log("🎮 PSG1 TEMPLATE MESSAGE:", message)
+            // console.log("🎮 PSG1 TEMPLATE MESSAGE:", message)
             
             // Update page title based on PSG1 state
             if (message === "PSG1_SCREEN_ACTIVE") {
@@ -190,7 +190,7 @@ export default function UnityPage() {
             // Handle NFT mint requests
             if (message.startsWith("NFT_MINT_REQUEST:")) {
               const nftData = message.replace("NFT_MINT_REQUEST:", "")
-              console.log("🎨 PSG1 Template NFT Mint:", nftData)
+              // console.log("🎨 PSG1 Template NFT Mint:", nftData)
               
               if ((window as any).parent && (window as any).parent.web3Bridge && (window as any).parent.web3Bridge.handleNFTMintRequest) {
                 ;(window as any).parent.web3Bridge.handleNFTMintRequest(nftData)
@@ -200,7 +200,7 @@ export default function UnityPage() {
             }
           }
           
-          console.log("✅ PSG1 Template: All bridge functions ready!")
+          // console.log("✅ PSG1 Template: All bridge functions ready!")
             
         }).catch((message: string) => {
           console.error("PSG1 WebGL Load Error:", message)
@@ -232,8 +232,8 @@ export default function UnityPage() {
     }}>
       <div style={{
         position: "relative",
-        width: "1040px",
-        height: "880px",
+        width: "940px",
+        height: "780px",
         backgroundImage: "url('/unity/OverlayPSG1.png')",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
@@ -243,8 +243,8 @@ export default function UnityPage() {
         alignItems: "center"
       }}>
         <div style={{
-          width: "900px",
-          height: "760px",
+          width: "800px",
+          height: "660px",
           background: "#000",
           overflow: "hidden",
           position: "relative"

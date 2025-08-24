@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface UnityGameProps {
   onBackToMenu: () => void;
@@ -9,6 +9,18 @@ interface UnityGameProps {
 
 export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+
+  // Copy wallet address to clipboard
+  const handleCopyAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy address:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up Unity WebGL communication bridge
@@ -73,12 +85,25 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
     <div className="flex flex-col min-h-screen">
       {/* Game Header */}
       <div className="w-full flex justify-between items-center z-10 p-4 bg-contain bg-center bg-no-repeat">
-        {/* <div>
-          <h1 className="text-2xl font-bold text-white font-mek">🎮 SolMechs Arena</h1>
-          <p className="text-gray-300 text-sm font-mek">
-            Player: {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
-          </p>
-        </div> */}
+        <div className="flex items-center gap-3 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-700">
+          <div className="text-gray-300 text-xs font-mek">
+            <div className="font-mono text-sm">
+              {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
+            </div>
+          </div>
+          <button
+            onClick={() => handleCopyAddress(walletAddress)}
+            className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+            title="Copy full wallet address"
+          >
+            {copiedAddress ? '✅' : '📋'}
+          </button>
+          {copiedAddress && (
+            <span className="text-green-400 text-xs font-bold animate-pulse">
+              Copied!
+            </span>
+          )}
+        </div>
         <button
           onClick={onBackToMenu}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-bold font-mek"
