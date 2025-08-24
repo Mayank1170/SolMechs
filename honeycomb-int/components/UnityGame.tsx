@@ -91,7 +91,7 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
       <div className="flex-1 relative">
         <iframe
           ref={iframeRef}
-          src="/unity/index.html"
+          src="/unity"
           className="w-full h-full border-0"
           style={{ height: 'calc(100vh)' }}
           title="SolMechs Unity WebGL Game"
