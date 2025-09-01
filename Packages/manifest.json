@@ -2,6 +2,7 @@
   "dependencies": {
     "com.playsolana.psdk": "https://github.com/playsolana/PlaySolana.Unity-SDK.git",
     "com.unity.adaptiveperformance": "5.1.1",
+    "com.unity.feature.2d": "1.0.0",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.toolchain.linux-x86_64": "2.0.10",
     "com.unity.ugui": "1.0.0",

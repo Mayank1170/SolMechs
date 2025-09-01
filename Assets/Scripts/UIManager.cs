@@ -13,6 +13,10 @@ public class UIManager : MonoBehaviour
     public Button[] actionButtons;
     public ScrollRect combatScroll;
 
+    [Header("Back Button (optional)")]
+    public Button backButton;
+
+
     [Header("Player Health Bars")]
     public Slider playerMatrixHPBar;
     public Slider playerRightArmHPBar;
@@ -157,6 +161,7 @@ public class UIManager : MonoBehaviour
         }
         return null;
     }
+
     // ===================== Health Bars =====================
     public void InitializeHealthBars(MechUnit playerUnit, MechUnit enemyUnit,
         Dictionary<ModuleSlot, int> playerMaxHPs, Dictionary<ModuleSlot, int> enemyMaxHPs)
@@ -281,6 +286,7 @@ public class UIManager : MonoBehaviour
     // ====================== Action Buttons ======================
     public void RenderActionButtons(MechUnit unit, System.Action<ModuleSlot, AttackData> onAttackSelected)
     {
+        HideBackButton();
         ClearButtonListeners();
         int buttonIndex = 0;
 
@@ -380,6 +386,24 @@ public class UIManager : MonoBehaviour
             default: return slot.ToString();
         }
     }
+
+    // Show a Back/Cancel button and wire a callback
+    public void ShowBackButton(System.Action onBack)
+    {
+        if (backButton == null) return;
+        backButton.gameObject.SetActive(true);
+        backButton.onClick.RemoveAllListeners();
+        backButton.onClick.AddListener(() => onBack?.Invoke());
+    }
+
+    // Hide the Back/Cancel button
+    public void HideBackButton()
+    {
+        if (backButton == null) return;
+        backButton.onClick.RemoveAllListeners();
+        backButton.gameObject.SetActive(false);
+    }
+
 
     // ========================== Log / Result ==========================
     public void LogMessage(string message)
@@ -582,145 +606,146 @@ public class UIManager : MonoBehaviour
             // Make sure no other Image in the prefab shows a white square
             HideBackgroundImagesExcept(go, icon);
 
-            // Value text (+/-N)
-            if (label)
-            {
-                label.text = (val > 0 ? "+" : "") + val.ToString();
-                label.color = Color.white; // keep as pure white; colors are carried by sprites
-                label.raycastTarget = false;
-            }
+                // Value text (+/-N)
+                if (label)
+                {
+                    label.text = (val > 0 ? "+" : "") + val.ToString();
+                    label.color = Color.white; // keep as pure white; colors are carried by sprites
+                    label.raycastTarget = false;
+                }
 
-            // Normalize chip rect size/scale in case the prefab has none
-            var rt = go.transform as RectTransform;
-            if (rt)
-            {
-                if (rt.sizeDelta == Vector2.zero || rt.sizeDelta.x > 64f)
-                    rt.sizeDelta = new Vector2(22f, 22f);
-                rt.localScale = Vector3.one;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Find the correct icon and label inside the chip prefab.
-    /// Prefers children named "Icon" / "Label"; falls back to the first Image/Text found.
-    /// </summary>
-    private void ResolveChipVisuals(GameObject go, out Image icon, out Text label)
-    {
-        icon = null;
-        label = null;
-
-        var images = go.GetComponentsInChildren<Image>(true);
-        var texts = go.GetComponentsInChildren<Text>(true);
-
-        foreach (var img in images)
-            if (img.name.Equals("Icon", System.StringComparison.OrdinalIgnoreCase)) { icon = img; break; }
-        if (!icon && images.Length > 0) icon = images[0];
-
-        foreach (var t in texts)
-            if (t.name.Equals("Label", System.StringComparison.OrdinalIgnoreCase)) { label = t; break; }
-        if (!label && texts.Length > 0) label = texts[0];
-    }
-
-    /// <summary>
-    /// Disable any Image components (other than the chosen icon) that have no sprite,
-    /// so they don't render as a solid white square.
-    /// </summary>
-    private void HideBackgroundImagesExcept(GameObject go, Image keep)
-    {
-        var images = go.GetComponentsInChildren<Image>(true);
-        foreach (var img in images)
-        {
-            if (img == keep) continue;
-
-            if (img.sprite == null)
-                img.enabled = false;
-
-            img.raycastTarget = false;
-        }
-    }
-
-    /// <summary>
-    /// Get the right container for player/enemy and slot.
-    /// </summary>
-    private Transform GetBuffContainer(bool isPlayer, ModuleSlot slot)
-    {
-        if (isPlayer)
-        {
-            switch (slot)
-            {
-                case ModuleSlot.Matrix: return playerMatrixBuffs;
-                case ModuleSlot.RightArm: return playerRightBuffs;
-                case ModuleSlot.LeftArm: return playerLeftBuffs;
-                case ModuleSlot.LowerBody: return playerLowerBuffs;
+                // Normalize chip rect size/scale in case the prefab has none
+                var rt = go.transform as RectTransform;
+                if (rt)
+                {
+                    if (rt.sizeDelta == Vector2.zero || rt.sizeDelta.x > 64f)
+                        rt.sizeDelta = new Vector2(22f, 22f);
+                    rt.localScale = Vector3.one;
+                }
             }
         }
-        else
+
+        /// <summary>
+        /// Find the correct icon and label inside the chip prefab.
+        /// Prefers children named "Icon" / "Label"; falls back to the first Image/Text found.
+        /// </summary>
+        private void ResolveChipVisuals(GameObject go, out Image icon, out Text label)
         {
-            switch (slot)
+            icon = null;
+            label = null;
+
+            var images = go.GetComponentsInChildren<Image>(true);
+            var texts = go.GetComponentsInChildren<Text>(true);
+
+            foreach (var img in images)
+                if (img.name.Equals("Icon", System.StringComparison.OrdinalIgnoreCase)) { icon = img; break; }
+            if (!icon && images.Length > 0) icon = images[0];
+
+            foreach (var t in texts)
+                if (t.name.Equals("Label", System.StringComparison.OrdinalIgnoreCase)) { label = t; break; }
+            if (!label && texts.Length > 0) label = texts[0];
+        }
+
+        /// <summary>
+        /// Disable any Image components (other than the chosen icon) that have no sprite,
+        /// so they don't render as a solid white square.
+        /// </summary>
+        private void HideBackgroundImagesExcept(GameObject go, Image keep)
+        {
+            var images = go.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
             {
-                case ModuleSlot.Matrix: return enemyMatrixBuffs;
-                case ModuleSlot.RightArm: return enemyRightBuffs;
-                case ModuleSlot.LeftArm: return enemyLeftBuffs;
-                case ModuleSlot.LowerBody: return enemyLowerBuffs;
+                if (img == keep) continue;
+
+                if (img.sprite == null)
+                    img.enabled = false;
+
+                img.raycastTarget = false;
             }
         }
-        return null;
-    }
 
-    /// <summary>
-    /// Return the Up/Down sprite for the given stat based on sign of stageValue.
-    /// </summary>
-    private Sprite GetBuffSprite(string stat, int stageValue)
-    {
-        bool up = stageValue > 0;
-        switch (stat.ToUpper())
+        /// <summary>
+        /// Get the right container for player/enemy and slot.
+        /// </summary>
+        private Transform GetBuffContainer(bool isPlayer, ModuleSlot slot)
         {
-            case "ATK": return up ? iconATK_Up : iconATK_Down;
-            case "DEF": return up ? iconDEF_Up : iconDEF_Down;
-            case "ENG": return up ? iconENG_Up : iconENG_Down;
-            case "SYS": return up ? iconSYS_Up : iconSYS_Down;
-            case "SPD": return up ? iconSPD_Up : iconSPD_Down;
-            default:
-                Debug.LogWarning($"[UIManager] Unknown stat: {stat}");
-                return null;
+            if (isPlayer)
+            {
+                switch (slot)
+                {
+                    case ModuleSlot.Matrix: return playerMatrixBuffs;
+                    case ModuleSlot.RightArm: return playerRightBuffs;
+                    case ModuleSlot.LeftArm: return playerLeftBuffs;
+                    case ModuleSlot.LowerBody: return playerLowerBuffs;
+                }
+            }
+            else
+            {
+                switch (slot)
+                {
+                    case ModuleSlot.Matrix: return enemyMatrixBuffs;
+                    case ModuleSlot.RightArm: return enemyRightBuffs;
+                    case ModuleSlot.LeftArm: return enemyLeftBuffs;
+                    case ModuleSlot.LowerBody: return enemyLowerBuffs;
+                }
+            }
+            return null;
         }
-    }
 
-    // =========================== FX: Attack Animations ===========================
-    [Header("Attack FX")]
-    public AttackFxLibrary attackFxLibrary;  // assign the ScriptableObject in inspector
+        /// <summary>
+        /// Return the Up/Down sprite for the given stat based on sign of stageValue.
+        /// </summary>
+        private Sprite GetBuffSprite(string stat, int stageValue)
+        {
+            bool up = stageValue > 0;
+            switch (stat.ToUpper())
+            {
+                case "ATK": return up ? iconATK_Up : iconATK_Down;
+                case "DEF": return up ? iconDEF_Up : iconDEF_Down;
+                case "ENG": return up ? iconENG_Up : iconENG_Down;
+                case "SYS": return up ? iconSYS_Up : iconSYS_Down;
+                case "SPD": return up ? iconSPD_Up : iconSPD_Down;
+                default:
+                    Debug.LogWarning($"[UIManager] Unknown stat: {stat}");
+                    return null;
+            }
+        }
 
-    /// <summary>
-    /// Plays an attack FX under the proper anchor (slot image).
-    /// fromPlayer: true if attack originates from the left mech (player side).
-    /// sourceSlot: which part launched (used to choose anchor image if you prefer).
-    /// attackName: used to pick prefab from the AttackFxLibrary.
-    /// </summary>
-    public void PlayAttackFx(bool fromPlayer, ModuleSlot sourceSlot, string attackName)
-    {
-        if (!fxEnabled || attackFxLibrary == null) return;
-        var prefab = attackFxLibrary.Get(attackName);
-        if (prefab == null) return;
+        // =========================== FX: Attack Animations ===========================
+        [Header("Attack FX")]
+        public AttackFxLibrary attackFxLibrary;  // assign the ScriptableObject in inspector
 
-        Image anchorImg = fromPlayer ? GetPlayerImageFor(sourceSlot) : GetEnemyImageFor(sourceSlot);
-        if (anchorImg == null) anchorImg = fromPlayer ? playerMatrixImg : enemyMatrixImg;
+        /// <summary>
+        /// Plays an attack FX under the proper anchor (slot image).
+        /// fromPlayer: true if attack originates from the left mech (player side).
+        /// sourceSlot: which part launched (used to choose anchor image if you prefer).
+        /// attackName: used to pick prefab from the AttackFxLibrary.
+        /// </summary>
+        public void PlayAttackFx(bool attackerIsPlayer, bool targetIsPlayer, ModuleSlot targetSlot, string attackName)
+        {
+            if (!fxEnabled || attackFxLibrary == null) return;
+            var prefab = attackFxLibrary.Get(attackName);
+            if (prefab == null) return;
 
-        var parent = anchorImg ? anchorImg.transform : this.transform;
-        bool leftToRight = fromPlayer; // player→enemy: true ; enemy→player: false
+            // Use the TARGET image, not the attacker image
+            Image targetImg = targetIsPlayer ? GetPlayerImageFor(targetSlot) : GetEnemyImageFor(targetSlot);
+            if (targetImg == null) targetImg = targetIsPlayer ? playerMatrixImg : enemyMatrixImg;
 
-        var fx = Instantiate(prefab);
-        fx.PlayUnder(parent, leftToRight);
-    }
+            var parent = targetImg ? targetImg.transform : this.transform;
+            bool leftToRight = attackerIsPlayer;
 
-    // =========================== NEW: Buff/Debuff FX & Destroyed Visual ===========================
-    [Header("Destroyed Parts Visual")]
-    [Range(0f, 1f)] public float destroyedAlpha = 0.35f;  // set in Inspector
-    [Range(0f, 1f)] public float normalAlpha = 1f;        // set in Inspector
+            var fx = Instantiate(prefab);
+            fx.PlayUnder(parent, leftToRight);
+        }
 
-    [Header("Buff/Debuff FX (by name in library)")]
-    public string defaultBuffFxAttackName = "Fortify";    // change to a name that exista na sua AttackFxLibrary
-    public string defaultDebuffFxAttackName = "Fortify";  // pode usar o mesmo até ter um específico
+        // =========================== NEW: Buff/Debuff FX & Destroyed Visual ===========================
+        [Header("Destroyed Parts Visual")]
+        [Range(0f, 1f)] public float destroyedAlpha = 0.35f;  // set in Inspector
+        [Range(0f, 1f)] public float normalAlpha = 1f;        // set in Inspector
+
+        [Header("Buff/Debuff FX (by name in library)")]
+        public string defaultBuffFxAttackName = "Fortify";    // change to a valid key in your AttackFxLibrary
+    public string defaultDebuffFxAttackName = "Fortify";  // can reuse until you add a specific debuff effect
 
     /// <summary>
     /// Applies a simple transparency change on a part image when destroyed/recovered.

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1eb768afd86291b4194915120e5dfa8d, type: 3}
+  m_Name: SFXLibrary
+  m_EditorClassIdentifier: 
+  entries:
+  - type: 0
+    clip: {fileID: 8300000, guid: 19cf4a5fc63f9924fbd004c821c99640, type: 3}
+  - type: 1
+    clip: {fileID: 8300000, guid: a86311de5ce03d84d8d69a4c806d0c8c, type: 3}
+  - type: 2
+    clip: {fileID: 8300000, guid: 4b6c154c65a6d984f8b3fc49d9a00b42, type: 3}
+  - type: 3
+    clip: {fileID: 8300000, guid: 29ed55b22be5c3c488d9aa461bd97bef, type: 3}
+  - type: 4
+    clip: {fileID: 8300000, guid: 1295138c31f579643836234f293d0345, type: 3}
+  - type: 5
+    clip: {fileID: 8300000, guid: 4b6c154c65a6d984f8b3fc49d9a00b42, type: 3}
+  - type: 6
+    clip: {fileID: 8300000, guid: 458032291b3f35b4ead54d3b32996d86, type: 3}
+  - type: 7
+    clip: {fileID: 0}
+  - type: 8
+    clip: {fileID: 0}
+  - type: 9
+    clip: {fileID: 8300000, guid: c13f466b164843d4f8564e5c457c7408, type: 3}
+  - type: 10
+    clip: {fileID: 8300000, guid: be6a9285f76211344bc5e1f8ccdd5c0d, type: 3}
+  - type: 11
+    clip: {fileID: 8300000, guid: be6a9285f76211344bc5e1f8ccdd5c0d, type: 3}

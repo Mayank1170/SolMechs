@@ -15,25 +15,27 @@ MonoBehaviour:
   items:
   - attackName: FX_Explosion
     prefab: {fileID: 6557074501073483244, guid: cbe00d313f9123149b6b40d027034f2c, type: 3}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
-  - attackName: 
-    prefab: {fileID: 0}
+  - attackName: Crush Grip
+    prefab: {fileID: 6145495352643938162, guid: ede89d57488539545bbf31ba21c09333, type: 3}
+  - attackName: Titan punch
+    prefab: {fileID: 3063661565932679271, guid: 289d88627a91c2e4ebd3d11a592dc497, type: 3}
+  - attackName: Fortify
+    prefab: {fileID: 832435665079173643, guid: c874cee0eca74fe46b4bbdc9cfe54969, type: 3}
+  - attackName: Striker Shot
+    prefab: {fileID: 5062656065926301328, guid: bd127ddb999fb7b40a3f26b4a5c05a3f, type: 3}
+  - attackName: Piercing Shot
+    prefab: {fileID: 3063661565932679271, guid: 289d88627a91c2e4ebd3d11a592dc497, type: 3}
+  - attackName: Focus Aim
+    prefab: {fileID: 832435665079173643, guid: c874cee0eca74fe46b4bbdc9cfe54969, type: 3}
+  - attackName: Overdrive Spike
+    prefab: {fileID: 5849891471394320172, guid: 4a34485516618ae4eae83cb67efdc79b, type: 3}
+  - attackName: Energy Boost
+    prefab: {fileID: 832435665079173643, guid: c874cee0eca74fe46b4bbdc9cfe54969, type: 3}
+  - attackName: Arclight Ray
+    prefab: {fileID: 5062656065926301328, guid: bd127ddb999fb7b40a3f26b4a5c05a3f, type: 3}
+  - attackName: Pulse Wave
+    prefab: {fileID: 5062656065926301328, guid: bd127ddb999fb7b40a3f26b4a5c05a3f, type: 3}
+  - attackName: System Reboot
+    prefab: {fileID: 832435665079173643, guid: c874cee0eca74fe46b4bbdc9cfe54969, type: 3}
+  - attackName: Disable Motors
+    prefab: {fileID: 5849891471394320172, guid: 4a34485516618ae4eae83cb67efdc79b, type: 3}

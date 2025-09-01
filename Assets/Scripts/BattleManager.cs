@@ -1,11 +1,12 @@
 using UnityEngine;
+using System.Collections; // needed for IEnumerator/Coroutines
 using System.Collections.Generic;
 using MechBattle;
 using System;
 
 public class BattleManager : MonoBehaviour
 {
-    // NEW: Loaders and optional UI reference
+    // === Loaders and optional UI reference ===
     public MechUnitLoader playerLoader;
     public MechUnitLoader enemyLoader;
     public UIManager ui; // optional; if null we'll FindObjectOfType
@@ -21,8 +22,16 @@ public class BattleManager : MonoBehaviour
     private enum BattleState { SelectingAttack, SelectingTarget, SelectingSelfTarget, EnemyTurn, Victory, Defeat }
     private BattleState currentState;
 
-    // NEW: battle-over guard to avoid double endings or late invokes
+    // Guard to avoid double endings or late invokes
     private bool battleOver = false;
+
+    // === TIMER ===
+    [SerializeField] private BattleTurnTimer turnTimer;  // assign in Inspector
+
+    // === FX pacing (minimal delays) ===
+    [Header("FX Pacing")]
+    [SerializeField] private float attackFxDuration = 0.80f; // wait this long after PlayAttackFx BEFORE applying damage
+    [SerializeField] private float fxDestroyDelay = 0.12f;   // tiny extra wait after destruction visual
 
     // Bootstrap
     private void Start()
@@ -45,8 +54,15 @@ public class BattleManager : MonoBehaviour
         // Set the sprites for both sides from the loaders
         uiManager.InitializePaperDolls(playerLoader, enemyLoader);
 
-        // IMPORTANT: do NOT call HideBattleResult() here — panel GO is disabled by default
+        // TIMER wire-up
+        if (turnTimer)
+        {
+            turnTimer.Initialize();
+            turnTimer.onPlayerFlagFall.AddListener(OnPlayerTimeout);
+            turnTimer.onEnemyFlagFall.AddListener(OnEnemyTimeout);
+        }
 
+        // Player starts deciding → timer runs during decision
         StartTurn();
     }
 
@@ -77,11 +93,12 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // ================== StartTurn (player selects action) ==================
     public void StartTurn()
     {
         if (battleOver) return;
 
-        // NEW: if player has no usable modules (3 broken parts / no actions) → immediate defeat
+        // if player has no usable modules (3 broken parts / no actions) → immediate defeat
         if (!HasAnyUsableModule(playerUnit) || AllNonMatrixPartsBroken(playerUnit))
         {
             uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
@@ -91,6 +108,10 @@ public class BattleManager : MonoBehaviour
         }
 
         currentState = BattleState.SelectingAttack;
+
+        // TIMER: player's clock ticks while DECIDING
+        if (turnTimer) turnTimer.BeginTurn(attackerIsPlayer: true);
+
         uiManager.RenderActionButtons(playerUnit, SelectAttack);
     }
 
@@ -108,36 +129,74 @@ public class BattleManager : MonoBehaviour
         selectedSourceSlot = sourceSlot;
         bool isSelfTarget = attack.target == MechBattle.TargetType.Self;
 
+        // Show Back button when entering target selection
         if (isSelfTarget)
         {
             currentState = BattleState.SelectingSelfTarget;
             uiManager.RenderSelfTargetButtons(playerUnit, ConfirmSelfTarget);
+            uiManager.ShowBackButton(OnBackFromTargetSelection);
         }
         else
         {
             currentState = BattleState.SelectingTarget;
             uiManager.RenderTargetButtons(enemyUnit, ConfirmTarget);
+            uiManager.ShowBackButton(OnBackFromTargetSelection);
         }
+    }
+
+    // Back button during target selection
+    private void OnBackFromTargetSelection()
+    {
+        selectedAttack = null;
+        selectedSourceSlot = ModuleSlot.Matrix; // default/unused
+        currentState = BattleState.SelectingAttack;
+
+        uiManager.HideBackButton();
+        uiManager.RenderActionButtons(playerUnit, SelectAttack);
+        uiManager.LogMessage("(Selection cancelled)");
     }
 
     public void ConfirmSelfTarget(ModuleSlot targetSlot)
     {
         if (currentState != BattleState.SelectingSelfTarget) return;
 
+        uiManager.HideBackButton(); // avoid double clicks
+        StartCoroutine(ConfirmSelfTargetFlow(targetSlot));
+    }
+
+    private IEnumerator ConfirmSelfTargetFlow(ModuleSlot targetSlot)
+    {
+        // guard: if source part got destroyed before resolution, cancel the move
+        if (playerUnit.IsPartBroken(selectedSourceSlot))
+        {
+            uiManager.LogMessage($"{playerUnit.Name}'s {selectedSourceSlot} was destroyed and cannot act!");
+            if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn(); // safety
+            currentState = BattleState.EnemyTurn;
+            TriggerEnemyTurn();
+            yield break;
+        }
+
         if (targetSlot != ModuleSlot.Matrix && playerUnit.IsPartBroken(targetSlot))
         {
             uiManager.LogMessage($"{targetSlot} is broken!");
-            return;
+            yield break;
         }
+
+        // Stop the clock as soon as the decision is locked
+        if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
 
         uiManager.LogMessage($"{playerUnit.Name} used {selectedAttack?.attackName ?? "Attack"} on itself ({targetSlot}).");
 
-        // NEW (Attack FX): play the attack effect for self-target moves (player side)
+        // Play attack FX first
         if (selectedAttack != null)
-            uiManager.PlayAttackFx(true, selectedSourceSlot, selectedAttack.attackName);
+            uiManager.PlayAttackFx(true, true, targetSlot, selectedAttack.attackName);
+
+        // wait FX (timer already stopped)
+        yield return WaitFx(attackFxDuration);
 
         ApplyEffect(playerUnit, playerUnit, targetSlot, selectedAttack);
         uiManager.UpdateHealthBars(playerUnit, targetSlot, GetCurrentHP(playerUnit, targetSlot), playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
+
         currentState = BattleState.EnemyTurn;
         TriggerEnemyTurn();
     }
@@ -146,61 +205,98 @@ public class BattleManager : MonoBehaviour
     {
         if (currentState != BattleState.SelectingTarget) return;
 
+        uiManager.HideBackButton(); // avoid double clicks
+        StartCoroutine(ConfirmTargetFlow(targetSlot));
+    }
+
+    private IEnumerator ConfirmTargetFlow(ModuleSlot targetSlot)
+    {
+        // guard: if source part got destroyed before resolution, cancel the move
+        if (playerUnit.IsPartBroken(selectedSourceSlot))
+        {
+            uiManager.LogMessage($"{playerUnit.Name}'s {selectedSourceSlot} was destroyed and cannot act!");
+            if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn(); // safety
+            currentState = BattleState.EnemyTurn;
+            TriggerEnemyTurn();
+            yield break;
+        }
+
         if (targetSlot == ModuleSlot.Matrix && !enemyUnit.CanAttackMatrix())
         {
             uiManager.LogMessage("Matrix locked!");
-            return;
+            yield break;
         }
 
-        // NEW (Attack FX): play the attack effect for player attacking enemy
-        if (selectedAttack != null)
-            uiManager.PlayAttackFx(true, selectedSourceSlot, selectedAttack.attackName);
+        // Stop the player's clock as soon as the move is locked
+        if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
 
+        // 1) Play attack FX on target
+        if (selectedAttack != null)
+            uiManager.PlayAttackFx(true, false, targetSlot, selectedAttack.attackName);
+
+        // 2) wait so we don't overlap explosion with the attack FX
+        yield return WaitFx(attackFxDuration);
+
+        // 3) Resolve damage and update UI
         int damage = CalculateDamage(selectedAttack, playerUnit, enemyUnit, targetSlot, selectedSourceSlot);
         int maxHP = enemyMaxHPs.ContainsKey(targetSlot) ? enemyMaxHPs[targetSlot] : 1;
         float damagePercent = (damage / (float)maxHP) * 100f;
         int prevHP = GetCurrentHP(enemyUnit, targetSlot);
         ApplyDamage(enemyUnit, targetSlot, damage);
         int newHP = GetCurrentHP(enemyUnit, targetSlot);
+
         uiManager.LogMessage($"{playerUnit.Name} used {selectedAttack?.attackName ?? "Attack"} on {enemyUnit.Name}'s {targetSlot}.");
         if (damage > 0) uiManager.LogMessage($"It dealt {damage} damage ({damagePercent:F1}%).");
+
         ApplyEffect(playerUnit, enemyUnit, targetSlot, selectedAttack);
         uiManager.UpdateHealthBars(enemyUnit, targetSlot, newHP, playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
 
+        // 4) If destroyed, play explosion AFTER attack FX finished
         if (newHP == 0 && prevHP > 0)
         {
             uiManager.LogMessage($"{enemyUnit.Name}'s {targetSlot} is no longer combat-ready!");
             ResetBuffStages(enemyUnit, targetSlot);
-            HandlePartDestroyed(enemyUnit, /*isPlayer*/ false, targetSlot); // already existed
+            yield return WaitFx(0.05f); // micro-gap
+            HandlePartDestroyed(enemyUnit, /*isPlayer*/ false, targetSlot);
+            yield return WaitFx(fxDestroyDelay); // readability
         }
 
-        // Condition 1: Matrix destroyed
+        // Win conditions
         if (enemyUnit.matrixHP <= 0)
         {
             uiManager.LogMessage($"{enemyUnit.Name}'s Matrix was destroyed!\n{playerUnit.Name} wins!");
             currentState = BattleState.Victory;
             EndBattle(true);
-            return;
+            yield break;
         }
 
-        // NEW – Condition 2: three parts destroyed / cannot act
         if (AllNonMatrixPartsBroken(enemyUnit) || !HasAnyUsableModule(enemyUnit))
         {
             uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
             currentState = BattleState.Victory;
             EndBattle(true);
-            return;
+            yield break;
         }
 
         currentState = BattleState.EnemyTurn;
         TriggerEnemyTurn();
     }
 
+    // ================== Enemy flow (stop enemy clock before FX) ==================
     public void EnemyTurn()
     {
         if (battleOver) return;
         if (currentState != BattleState.EnemyTurn) return;
         if (enemyUnit == null) return;
+
+        uiManager.HideBackButton(); // safety
+        StartCoroutine(EnemyTurnFlow());
+    }
+
+    private IEnumerator EnemyTurnFlow()
+    {
+        // AI DECISION phase: start enemy clock
+        if (turnTimer) turnTimer.BeginTurn(attackerIsPlayer: false);
 
         // If enemy cannot act, player wins
         var validModules = new List<ModuleSlot>();
@@ -209,10 +305,11 @@ public class BattleManager : MonoBehaviour
 
         if (validModules.Count == 0)
         {
+            if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
             uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
             currentState = BattleState.Victory;
             EndBattle(true);
-            return;
+            yield break;
         }
 
         var chosenSlot = validModules[UnityEngine.Random.Range(0, validModules.Count)];
@@ -225,16 +322,32 @@ public class BattleManager : MonoBehaviour
             selfOptions.RemoveAll(s => s != ModuleSlot.Matrix && enemyUnit.IsPartBroken(s));
             if (selfOptions.Count == 0)
             {
+                if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
                 uiManager.LogMessage("\n");
-                currentState = BattleState.SelectingAttack;
-                uiManager.RenderActionButtons(playerUnit, SelectAttack);
-                return;
+                // >>> Return to player's decision (and start his clock)
+                StartTurn();
+                yield break;
             }
+
+            // guard: cancel if source part got destroyed before executing FX
+            if (enemyUnit.IsPartBroken(chosenSlot))
+            {
+                if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
+                uiManager.LogMessage($"{enemyUnit.Name}'s {chosenSlot} was destroyed and cannot act!");
+                uiManager.LogMessage("\n");
+                // >>> Back to player's decision
+                StartTurn();
+                yield break;
+            }
+
+            // Enemy locks move → stop enemy clock
+            if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
+
             ModuleSlot selfTarget = selfOptions[UnityEngine.Random.Range(0, selfOptions.Count)];
             uiManager.LogMessage($"{enemyUnit.Name} used {attack.attackName} on itself ({selfTarget}).");
 
-            // NEW (Attack FX): enemy casting a self-target move
-            uiManager.PlayAttackFx(false, chosenSlot, attack.attackName);
+            uiManager.PlayAttackFx(false, false, selfTarget, attack.attackName);
+            yield return WaitFx(attackFxDuration);
 
             ApplyEffect(enemyUnit, enemyUnit, selfTarget, attack);
             uiManager.UpdateHealthBars(enemyUnit, selfTarget, GetCurrentHP(enemyUnit, selfTarget), playerMaxHPs, enemyMaxHPs, playerUnit, enemyUnit);
@@ -245,8 +358,21 @@ public class BattleManager : MonoBehaviour
             if (target == ModuleSlot.Matrix && !playerUnit.CanAttackMatrix())
                 target = ModuleSlot.LowerBody;
 
-            // NEW (Attack FX): enemy attacking the player
-            uiManager.PlayAttackFx(false, chosenSlot, attack.attackName);
+            if (enemyUnit.IsPartBroken(chosenSlot))
+            {
+                if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
+                uiManager.LogMessage($"{enemyUnit.Name}'s {chosenSlot} was destroyed and cannot act!");
+                uiManager.LogMessage("\n");
+                // >>> Back to player's decision
+                StartTurn();
+                yield break;
+            }
+
+            // Enemy locks move → stop enemy clock
+            if (turnTimer && turnTimer.IsRunning) turnTimer.EndTurn();
+
+            uiManager.PlayAttackFx(false, true, target, attack.attackName);
+            yield return WaitFx(attackFxDuration);
 
             int damage = CalculateDamage(attack, enemyUnit, playerUnit, target, chosenSlot);
             int maxHP = playerMaxHPs.ContainsKey(target) ? playerMaxHPs[target] : 1;
@@ -263,31 +389,33 @@ public class BattleManager : MonoBehaviour
             {
                 uiManager.LogMessage($"{playerUnit.Name}'s {target} is no longer combat-ready!");
                 ResetBuffStages(playerUnit, target);
-                HandlePartDestroyed(playerUnit, /*isPlayer*/ true, target); // already existed
+
+                yield return WaitFx(0.05f);
+                HandlePartDestroyed(playerUnit, /*isPlayer*/ true, target);
+                yield return WaitFx(fxDestroyDelay);
             }
 
-            // Condition 1: player's Matrix destroyed
             if (playerUnit.matrixHP <= 0)
             {
                 uiManager.LogMessage($"{playerUnit.Name}'s Matrix was destroyed!\n{enemyUnit.Name} wins!");
                 currentState = BattleState.Defeat;
                 EndBattle(false);
-                return;
+                yield break;
             }
 
-            // NEW – Condition 2: three parts destroyed / no modules
             if (AllNonMatrixPartsBroken(playerUnit) || !HasAnyUsableModule(playerUnit))
             {
                 uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
                 currentState = BattleState.Defeat;
                 EndBattle(false);
-                return;
+                yield break;
             }
         }
 
         uiManager.LogMessage("\n");
-        currentState = BattleState.SelectingAttack;
-        uiManager.RenderActionButtons(playerUnit, SelectAttack);
+
+        // >>> Always return via StartTurn so the player's clock starts
+        StartTurn();
     }
 
     private void TriggerEnemyTurn()
@@ -302,11 +430,42 @@ public class BattleManager : MonoBehaviour
         if (battleOver) return;
         battleOver = true;
 
-        // Ensure no pending enemy turns fire after the battle is over
         CancelInvoke(nameof(EnemyTurn));
 
+        if (turnTimer)
+        {
+            turnTimer.SetPaused(true);
+            turnTimer.enabled = false;
+            turnTimer.onPlayerFlagFall.RemoveListener(OnPlayerTimeout);
+            turnTimer.onEnemyFlagFall.RemoveListener(OnEnemyTimeout);
+        }
+
+        uiManager.HideBackButton(); // safety
         uiManager.DisableAllButtons();
         uiManager.ShowBattleResult(playerWon, 0);
+    }
+
+    // === TIMER: timeouts -> instant end ===
+    public void OnPlayerTimeout()
+    {
+        if (battleOver) return;
+        currentState = BattleState.Defeat;
+        EndBattle(false);
+    }
+
+    public void OnEnemyTimeout()
+    {
+        if (battleOver) return;
+        currentState = BattleState.Victory;
+        EndBattle(true);
+    }
+
+    // ================== Helpers ==================
+
+    private IEnumerator WaitFx(float seconds)
+    {
+        if (seconds > 0f)
+            yield return new WaitForSecondsRealtime(seconds);
     }
 
     private int GetCurrentHP(MechUnit unit, ModuleSlot slot)
@@ -374,9 +533,8 @@ public class BattleManager : MonoBehaviour
 
             int delta = isBuff ? amount : -amount;
 
-            var (prevStage, newStage) = ApplyBuffStageDetailed(unit, slot, stat, delta); // NEW
+            var (prevStage, newStage) = ApplyBuffStageDetailed(unit, slot, stat, delta);
 
-            // NEW: little sparkle/smoke when a stage is applied
             uiManager.PlayBuffDebuffFx(unit == playerUnit, slot, isBuff);
 
             if (newStage == 0)
@@ -400,7 +558,7 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        if (effect.ToLower().Contains("piercing")) // <<<<<< CORRIGIDO (Contains)
+        if (effect.ToLower().Contains("piercing"))
         {
             uiManager.LogMessage("Effect: Piercing – halves defense this turn.");
             return;
@@ -549,7 +707,7 @@ public class BattleManager : MonoBehaviour
         return false;
     }
 
-    // ====================== helper used earlier ======================
+    // ====================== Destroyed-part helper ======================
     private void HandlePartDestroyed(MechUnit unit, bool isPlayer, ModuleSlot slot)
     {
         if (uiManager != null)
