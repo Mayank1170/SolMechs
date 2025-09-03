@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client, PROJECT_ADDRESS } from "../constants/client";
 import { autoAirdropSol } from "../utils/airdrop";
@@ -13,32 +15,44 @@ type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_
 
 export default function Home() {
   const user = useUser();
-  const solanaWallet = useWallet({ type: "solana" });
+  const civicWallet = useWallet({ type: "solana" });
+  const externalWallet = useSolanaWallet();
+  const walletModal = useWalletModal();
   const [isLoading, setIsLoading] = useState(false);
   const [gameState, setGameState] = useState<GameState>('CONNECTING');
   const [userExists, setUserExists] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
+  // Get the active wallet (either Civic or external)
+  const activeWallet = civicWallet.address ? civicWallet : externalWallet.publicKey ? {
+    address: externalWallet.publicKey.toString(),
+    wallet: externalWallet
+  } : null;
+
   // Main flow logic when user authentication status changes
   useEffect(() => {
     const handleUserFlow = async () => {
+      // Check for external wallet connection first
+      if (externalWallet.connected && externalWallet.publicKey) {
+        await checkUserAndProfile();
+        return;
+      }
+
       if (!user?.isAuthenticated) {
         setGameState('CONNECTING');
         return;
       }
 
       // User is authenticated with Civic
-      if (!solanaWallet.address) {
-        // User authenticated but no wallet - check if they need to create one or if they have an existing Honeycomb account
+      if (!civicWallet.address) {
         await checkIfUserNeedsWallet();
       } else {
-        // User has wallet - proceed with normal flow
         await checkUserAndProfile();
       }
     };
 
     handleUserFlow();
-  }, [user?.isAuthenticated, solanaWallet.address]);
+  }, [user?.isAuthenticated, civicWallet.address, externalWallet.connected, externalWallet.publicKey]);
 
   // Check if user needs wallet creation or if they can proceed directly
   const checkIfUserNeedsWallet = async () => {
@@ -80,9 +94,9 @@ export default function Home() {
       
       // Wait a moment for wallet to be available, then silently check balance
       setTimeout(async () => {
-        if (solanaWallet.address) {
+        if (civicWallet.address) {
           // Silent background balance maintenance
-          autoAirdropSol(solanaWallet.address);
+          autoAirdropSol(civicWallet.address);
           checkUserAndProfile();
         }
       }, 1000);
@@ -98,19 +112,19 @@ export default function Home() {
 
 
   const checkUserAndProfile = async () => {
-    // Get address from Civic Solana wallet
-    if (!solanaWallet.address) return;
+    // Get address from active wallet
+    if (!activeWallet?.address) return;
     
     setIsLoading(true);
     setGameState('CHECKING_USER');
     
     try {
       // Silent background balance maintenance for existing wallets
-      autoAirdropSol(solanaWallet.address);
+      autoAirdropSol(activeWallet.address);
 
       // Check if user exists
       const usersResult = await client.findUsers({
-        wallets: [solanaWallet.address]
+        wallets: [activeWallet.address]
       });
       const honeycombUser = (usersResult as any)?.[0] || null;
       
@@ -121,7 +135,7 @@ export default function Home() {
         // Check if user has profile for this project
         const profilesResult = await client.findProfiles({
           projects: [projectAddress],
-          addresses: [solanaWallet.address]
+          addresses: [activeWallet.address]
         });
         const profile = (profilesResult as any)?.[0] || null;
         
@@ -154,12 +168,12 @@ export default function Home() {
   };
 
   const createUserWithProfile = async () => {
-    if (!solanaWallet.address) {
+    if (!activeWallet?.address) {
       alert("Please connect your wallet first");
       return;
     }
     // Use default name based on wallet address
-    const defaultName = "Player_" + solanaWallet.address.slice(-4);
+    const defaultName = "Player_" + activeWallet.address.slice(-4);
 
     setIsLoading(true);
     try {
@@ -169,8 +183,8 @@ export default function Home() {
         createNewUserWithProfileTransaction: txResponse
       } = await client.createNewUserWithProfileTransaction({
         project: projectAddress,
-        wallet: solanaWallet.address,
-        payer: solanaWallet.address,
+        wallet: activeWallet.address,
+        payer: activeWallet.address,
         profileIdentity: "main",
         userInfo: {
           name: defaultName,
@@ -179,10 +193,10 @@ export default function Home() {
         },
       });
 
-      // Use Civic wallet for signing
+      // Use active wallet for signing
       const result = await sendClientTransactions(
         client,
-        solanaWallet.wallet,
+        activeWallet.wallet,
         txResponse
       );
       // console.log("📋 Transaction result:", result);
@@ -215,7 +229,7 @@ export default function Home() {
   };
 
   const createProfileForExistingUser = async () => {
-    if (!solanaWallet.address) {
+    if (!activeWallet?.address) {
       alert("Please connect your wallet first");
       return;
     }
@@ -228,14 +242,14 @@ export default function Home() {
         createNewProfileTransaction: txResponse
       } = await client.createNewProfileTransaction({
         project: projectAddress,
-        payer: solanaWallet.address,
+        payer: activeWallet.address,
         identity: "main",
       });
 
-      // Use Civic wallet for signing
+      // Use active wallet for signing
       const result = await sendClientTransactions(
         client,
-        solanaWallet.wallet,
+        activeWallet.wallet,
         txResponse
       );
       // console.log("📋 Transaction result:", result);
@@ -292,6 +306,27 @@ export default function Home() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      // If authenticated with Civic, sign out
+      const anyUser = user as any;
+      if (anyUser?.isAuthenticated && typeof anyUser?.signOut === 'function') {
+        await anyUser.signOut();
+      }
+      // If using an external wallet, disconnect it
+      if (externalWallet.connected) {
+        await externalWallet.disconnect();
+      }
+    } catch (e) {
+      console.error('Error during sign out:', e);
+    } finally {
+      // Reset local state
+      setGameState('CONNECTING');
+      setUserExists(false);
+      setProfileExists(false);
+    }
+  };
+
   const handleBackToMenu = () => {
     setGameState('CONNECTING');
     // Reset states when going back
@@ -304,7 +339,7 @@ export default function Home() {
     return (
       <UnityGame 
         onBackToMenu={handleBackToMenu}
-        walletAddress={solanaWallet.address || ''}
+        walletAddress={activeWallet?.address || ''}
       />
     );
   }
@@ -320,32 +355,34 @@ export default function Home() {
 
         {/* Wallet Connection Status */}
         <div className="mb-6 p-8 h-[80%] flex flex-col items-center justify-center lg:w-[50vw] md:w-[80vw] w-[300px] bg-contain bg-center bg-no-repeat" style={{backgroundImage: "url('/images/frame.png')", minHeight: '550px'}}>
-          {!user?.isAuthenticated ? (
+          {!user?.isAuthenticated && !externalWallet.connected ? (
             <div className="text-center flex flex-col items-center">
               <div className="text-4xl mb-4">
                 <Image src="/images/connect_logo.png" alt="Link" width={100} height={100} className="w-[40px] h-[40px]" /> 
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Welcome to SolMechs</h2>
-              <p className="text-gray-300 mb-4">Sign in to start playing</p>
+              <p className="text-gray-300 mb-6">Connect your wallet to start</p>
+
+              {/* Connect Wallet Button (includes Civic in wallet flow) */}
               <div className="flex justify-center relative">
-                {/* Custom button overlay */}
-                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
+                <div 
+                  className="relative hover:scale-105 transition-transform duration-200 z-10 cursor-pointer"
+                  onClick={() => walletModal.setVisible(true)}
+                >
                   <Image 
                     src="/images/Button1.png" 
-                    alt="Sign In" 
+                    alt="Connect Wallet" 
                     width={200} 
                     height={60} 
                     className="w-auto h-auto"
                   />
                   <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none font-mek">
-                    SIGN IN 
+                    CONNECT WALLET
                   </span>
                 </div>
-                {/* Hidden actual SignInButton positioned behind */}
-                <SignInButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
-          ) : solanaWallet.address && gameState !== 'CREATING_PROFILE' ? (
+          ) : activeWallet?.address && gameState !== 'CREATING_PROFILE' ? (
             <div className="text-center">
               <div className="text-4xl mb-4">✅</div>
               <h2 className="text-xl font-bold text-green-400 mb-2">Ready to Play</h2>
@@ -353,7 +390,7 @@ export default function Home() {
 
               <div className="mt-3 flex gap-2 justify-center relative">
                 {/* Custom button overlay */}
-                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
+                <div className="relative hover:scale-105 transition-transform duration-200 z-10 cursor-pointer" onClick={handleSignOut}>
                   <Image 
                     src="/images/Button1.png" 
                     alt="Sign Out" 
@@ -365,8 +402,6 @@ export default function Home() {
                     SIGN OUT
                   </span>
                 </div>
-                {/* Hidden actual SignOutButton positioned behind */}
-                <SignOutButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
           ) : gameState === 'CREATING_PROFILE' ? (
