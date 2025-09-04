@@ -1,9 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react";
-import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
-import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useUser, useWallet, SignInButton } from "@civic/auth-web3/react";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client, PROJECT_ADDRESS } from "../constants/client";
 import { autoAirdropSol } from "../utils/airdrop";
@@ -16,28 +14,17 @@ type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_
 export default function Home() {
   const user = useUser();
   const civicWallet = useWallet({ type: "solana" });
-  const externalWallet = useSolanaWallet();
-  const walletModal = useWalletModal();
   const [isLoading, setIsLoading] = useState(false);
   const [gameState, setGameState] = useState<GameState>('CONNECTING');
   const [userExists, setUserExists] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
-  // Get the active wallet (either Civic or external)
-  const activeWallet = civicWallet.address ? civicWallet : externalWallet.publicKey ? {
-    address: externalWallet.publicKey.toString(),
-    wallet: externalWallet
-  } : null;
+  // Active wallet (Civic only)
+  const activeWallet = civicWallet.address ? { address: civicWallet.address, wallet: civicWallet as any } : null;
 
   // Main flow logic when user authentication status changes
   useEffect(() => {
     const handleUserFlow = async () => {
-      // Check for external wallet connection first
-      if (externalWallet.connected && externalWallet.publicKey) {
-        await checkUserAndProfile();
-        return;
-      }
-
       if (!user?.isAuthenticated) {
         setGameState('CONNECTING');
         return;
@@ -52,7 +39,7 @@ export default function Home() {
     };
 
     handleUserFlow();
-  }, [user?.isAuthenticated, civicWallet.address, externalWallet.connected, externalWallet.publicKey]);
+  }, [user?.isAuthenticated, civicWallet.address]);
 
   // Check if user needs wallet creation or if they can proceed directly
   const checkIfUserNeedsWallet = async () => {
@@ -109,7 +96,6 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
 
   const checkUserAndProfile = async () => {
     // Get address from active wallet
@@ -169,7 +155,7 @@ export default function Home() {
 
   const createUserWithProfile = async () => {
     if (!activeWallet?.address) {
-      alert("Please connect your wallet first");
+      alert("Please sign in first");
       return;
     }
     // Use default name based on wallet address
@@ -230,7 +216,7 @@ export default function Home() {
 
   const createProfileForExistingUser = async () => {
     if (!activeWallet?.address) {
-      alert("Please connect your wallet first");
+      alert("Please sign in first");
       return;
     }
 
@@ -313,10 +299,6 @@ export default function Home() {
       if (anyUser?.isAuthenticated && typeof anyUser?.signOut === 'function') {
         await anyUser.signOut();
       }
-      // If using an external wallet, disconnect it
-      if (externalWallet.connected) {
-        await externalWallet.disconnect();
-      }
     } catch (e) {
       console.error('Error during sign out:', e);
     } finally {
@@ -355,7 +337,7 @@ export default function Home() {
 
         {/* Wallet Connection Status */}
         <div className="mb-6 p-8 h-[80%] flex flex-col items-center justify-center lg:w-[50vw] md:w-[80vw] w-[300px] bg-contain bg-center bg-no-repeat" style={{backgroundImage: "url('/images/frame.png')", minHeight: '550px'}}>
-          {!user?.isAuthenticated && !externalWallet.connected ? (
+          {!user?.isAuthenticated ? (
             <div className="text-center flex flex-col items-center">
               <div className="text-4xl mb-4">
                 <Image src="/images/connect_logo.png" alt="Link" width={100} height={100} className="w-[40px] h-[40px]" /> 
@@ -363,21 +345,24 @@ export default function Home() {
               <h2 className="text-3xl font-bold text-white mb-2">Welcome to SolMechs</h2>
               <p className="text-gray-300 mb-6">Connect your wallet to start</p>
 
-              {/* Connect Wallet Button (includes Civic in wallet flow) */}
-              <div className="flex justify-center relative">
-                <div 
-                  className="relative hover:scale-105 transition-transform duration-200 z-10 cursor-pointer"
-                  onClick={() => walletModal.setVisible(true)}
-                >
-                  <Image 
-                    src="/images/Button1.png" 
-                    alt="Connect Wallet" 
-                    width={200} 
-                    height={60} 
-                    className="w-auto h-auto"
+              {/* Civic Sign In Button */}
+              <div className="flex justify-center">
+                <div className="relative z-10">
+                  <SignInButton 
+                    className="hover:scale-105 transition-transform duration-200 cursor-pointer"
+                    style={{
+                      width: 200,
+                      height: 60,
+                      backgroundImage: "url('/images/Button1.png')",
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                      display: 'block',
+                      border: 'none'
+                    }}
                   />
-                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none font-mek">
-                    CONNECT WALLET
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-white font-bold text-xl font-mek">
+                    {/* CONNECT WALLET */}
                   </span>
                 </div>
               </div>
