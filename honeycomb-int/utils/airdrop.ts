@@ -154,7 +154,7 @@ export class SolAirdropService {
         error: result.error
       }
     } catch (error) {
-      console.log('[Background] Error in balance maintenance:', error)
+      // console.log('[Background] Error in balance maintenance:', error)
       return {
         airdropped: false,
         error: error instanceof Error ? error.message : 'Background maintenance failed'

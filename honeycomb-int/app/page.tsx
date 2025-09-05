@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react";
-import { useUser, useWallet, SignInButton } from "@civic/auth-web3/react";
+import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client, PROJECT_ADDRESS } from "../constants/client";
 import { autoAirdropSol } from "../utils/airdrop";
@@ -13,15 +13,12 @@ type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_
 
 export default function Home() {
   const user = useUser();
-  const civicWallet = useWallet({ type: "solana" });
+  const solanaWallet = useWallet({ type: "solana" });
   const [isLoading, setIsLoading] = useState(false);
   const [gameState, setGameState] = useState<GameState>('CONNECTING');
   const [userExists, setUserExists] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
-  // Active wallet (Civic only)
-  const activeWallet = civicWallet.address ? { address: civicWallet.address, wallet: civicWallet as any } : null;
-
   // Main flow logic when user authentication status changes
   useEffect(() => {
     const handleUserFlow = async () => {
@@ -31,15 +28,17 @@ export default function Home() {
       }
 
       // User is authenticated with Civic
-      if (!civicWallet.address) {
+      if (!solanaWallet.address) {
+        // User authenticated but no wallet - check if they need to create one or if they have an existing Honeycomb account
         await checkIfUserNeedsWallet();
       } else {
+        // User has wallet - proceed with normal flow
         await checkUserAndProfile();
       }
     };
 
     handleUserFlow();
-  }, [user?.isAuthenticated, civicWallet.address]);
+  }, [user?.isAuthenticated, solanaWallet.address]);
 
   // Check if user needs wallet creation or if they can proceed directly
   const checkIfUserNeedsWallet = async () => {
@@ -81,9 +80,9 @@ export default function Home() {
       
       // Wait a moment for wallet to be available, then silently check balance
       setTimeout(async () => {
-        if (civicWallet.address) {
+        if (solanaWallet.address) {
           // Silent background balance maintenance
-          autoAirdropSol(civicWallet.address);
+          autoAirdropSol(solanaWallet.address);
           checkUserAndProfile();
         }
       }, 1000);
@@ -97,20 +96,21 @@ export default function Home() {
     }
   };
 
+
   const checkUserAndProfile = async () => {
-    // Get address from active wallet
-    if (!activeWallet?.address) return;
+    // Get address from Civic Solana wallet
+    if (!solanaWallet.address) return;
     
     setIsLoading(true);
     setGameState('CHECKING_USER');
     
     try {
       // Silent background balance maintenance for existing wallets
-      autoAirdropSol(activeWallet.address);
+      autoAirdropSol(solanaWallet.address);
 
       // Check if user exists
       const usersResult = await client.findUsers({
-        wallets: [activeWallet.address]
+        wallets: [solanaWallet.address]
       });
       const honeycombUser = (usersResult as any)?.[0] || null;
       
@@ -121,7 +121,7 @@ export default function Home() {
         // Check if user has profile for this project
         const profilesResult = await client.findProfiles({
           projects: [projectAddress],
-          addresses: [activeWallet.address]
+          addresses: [solanaWallet.address]
         });
         const profile = (profilesResult as any)?.[0] || null;
         
@@ -154,38 +154,23 @@ export default function Home() {
   };
 
   const createUserWithProfile = async () => {
-    if (!activeWallet?.address) {
-      alert("Please sign in first");
+    if (!solanaWallet.address) {
+      alert("Please connect your wallet first");
       return;
     }
-
-    // Validate wallet is ready for signing
-    if (!activeWallet.wallet || !activeWallet.wallet.signTransaction) {
-      alert("Wallet is not ready for signing. Please reconnect your wallet.");
-      setGameState('CONNECTING');
-      return;
-    }
-
-    // Check user authentication status
-    if (!user?.isAuthenticated) {
-      alert("Please authenticate first to create your profile.");
-      setGameState('CONNECTING');
-      return;
-    }
-
     // Use default name based on wallet address
-    const defaultName = "Player_" + activeWallet.address.slice(-4);
+    const defaultName = "Player_" + solanaWallet.address.slice(-4);
 
     setIsLoading(true);
     try {
       // Create user + profile in one transaction (first time user)
-      console.log("🆕 Creating new user with profile...");
+      // console.log("🆕 Creating new user with profile...");
       const {
         createNewUserWithProfileTransaction: txResponse
       } = await client.createNewUserWithProfileTransaction({
         project: projectAddress,
-        wallet: activeWallet.address,
-        payer: activeWallet.address,
+        wallet: solanaWallet.address,
+        payer: solanaWallet.address,
         profileIdentity: "main",
         userInfo: {
           name: defaultName,
@@ -194,12 +179,10 @@ export default function Home() {
         },
       });
 
-      console.log("📧 Please check your email for OTP verification...");
-      
-      // Use active wallet for signing - this should trigger OTP email
+      // Use Civic wallet for signing
       const result = await sendClientTransactions(
         client,
-        activeWallet.wallet,
+        solanaWallet.wallet,
         txResponse
       );
       // console.log("📋 Transaction result:", result);
@@ -232,43 +215,27 @@ export default function Home() {
   };
 
   const createProfileForExistingUser = async () => {
-    if (!activeWallet?.address) {
-      alert("Please sign in first");
-      return;
-    }
-
-    // Validate wallet is ready for signing
-    if (!activeWallet.wallet || !activeWallet.wallet.signTransaction) {
-      alert("Wallet is not ready for signing. Please reconnect your wallet.");
-      setGameState('CONNECTING');
-      return;
-    }
-
-    // Check user authentication status
-    if (!user?.isAuthenticated) {
-      alert("Please authenticate first to create your profile.");
-      setGameState('CONNECTING');
+    if (!solanaWallet.address) {
+      alert("Please connect your wallet first");
       return;
     }
 
     setIsLoading(true);
     try {
       // User exists, just create profile for this project
-      console.log("👤 Creating profile for existing user...");
+      // console.log("👤 Creating profile for existing user...");
       const {
         createNewProfileTransaction: txResponse
       } = await client.createNewProfileTransaction({
         project: projectAddress,
-        payer: activeWallet.address,
+        payer: solanaWallet.address,
         identity: "main",
       });
 
-      console.log("📧 Please check your email for OTP verification...");
-
-      // Use active wallet for signing - this should trigger OTP email
+      // Use Civic wallet for signing
       const result = await sendClientTransactions(
         client,
-        activeWallet.wallet,
+        solanaWallet.wallet,
         txResponse
       );
       // console.log("📋 Transaction result:", result);
@@ -318,44 +285,10 @@ export default function Home() {
       // General simulation failure
       alert("❌ Transaction Failed\n\nThe transaction could not be completed. This might be due to:\n• Insufficient SOL balance\n• Network issues\n• Wallet configuration\n\nPlease check your wallet and try again.");
       setGameState('CONNECTING');
-    } else if (errorMessage.includes("Invalid wallet") || errorMessage.includes("wallet")) {
-      // Wallet-related errors - likely OTP/verification issue
-      alert("❌ Wallet Verification Required\n\nYour wallet needs to be verified to create a profile.\n\n" +
-            "Expected steps:\n" +
-            "1. Check your email for an OTP verification code\n" +
-            "2. Complete the verification process\n" +
-            "3. Try creating your profile again\n\n" +
-            "If you're not receiving emails, please check your spam folder or contact support.");
-      setGameState('CONNECTING');
-    } else if (errorMessage.includes("User rejected") || errorMessage.includes("cancelled")) {
-      // User cancelled transaction
-      alert("❌ Transaction Cancelled\n\nProfile creation was cancelled. Please try again to continue playing.");
-      setGameState('CONNECTING');
     } else {
       // Other errors
-      alert("❌ Error creating profile:\n\n" + errorMessage + 
-            "\n\nIf this is an authentication issue, please:\n" +
-            "• Check your email for verification codes\n" +
-            "• Ensure your wallet is properly connected\n" +
-            "• Try refreshing the page and reconnecting");
+      alert("❌ Error creating profile:\n\n" + errorMessage);
       setGameState('CONNECTING');
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      // If authenticated with Civic, sign out
-      const anyUser = user as any;
-      if (anyUser?.isAuthenticated && typeof anyUser?.signOut === 'function') {
-        await anyUser.signOut();
-      }
-    } catch (e) {
-      console.error('Error during sign out:', e);
-    } finally {
-      // Reset local state
-      setGameState('CONNECTING');
-      setUserExists(false);
-      setProfileExists(false);
     }
   };
 
@@ -366,35 +299,12 @@ export default function Home() {
     setProfileExists(false);
   };
 
-  const handleRetryConnection = async () => {
-    try {
-      setIsLoading(true);
-      setGameState('CONNECTING');
-      
-      // Reset states
-      setUserExists(false);
-      setProfileExists(false);
-      
-      // Wait a moment then try again
-      setTimeout(async () => {
-        if (user?.isAuthenticated && civicWallet.address) {
-          await checkUserAndProfile();
-        }
-      }, 1000);
-      
-    } catch (error) {
-      console.error("Error retrying connection:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Main render logic
   if (gameState === 'PLAYING') {
     return (
       <UnityGame 
         onBackToMenu={handleBackToMenu}
-        walletAddress={activeWallet?.address || ''}
+        walletAddress={solanaWallet.address || ''}
       />
     );
   }
@@ -416,31 +326,26 @@ export default function Home() {
                 <Image src="/images/connect_logo.png" alt="Link" width={100} height={100} className="w-[40px] h-[40px]" /> 
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Welcome to SolMechs</h2>
-              <p className="text-gray-300 mb-6">Connect your wallet to start</p>
-
-              {/* Civic Sign In Button */}
-              <div className="flex justify-center">
-                <div className="relative z-10">
-                  <SignInButton 
-                    className="hover:scale-105 transition-transform duration-200 cursor-pointer"
-                    style={{
-                      width: 200,
-                      height: 60,
-                      backgroundImage: "url('/images/Button1.png')",
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center',
-                      display: 'block',
-                      border: 'none'
-                    }}
+              <p className="text-gray-300 mb-4">Sign in to start playing</p>
+              <div className="flex justify-center relative">
+                {/* Custom button overlay */}
+                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
+                  <Image 
+                    src="/images/Button1.png" 
+                    alt="Sign In" 
+                    width={200} 
+                    height={60} 
+                    className="w-auto h-auto"
                   />
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-white font-bold text-xl font-mek">
-                    {/* CONNECT WALLET */}
+                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none font-mek">
+                    SIGN IN 
                   </span>
                 </div>
+                {/* Hidden actual SignInButton positioned behind */}
+                <SignInButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
-          ) : activeWallet?.address && gameState !== 'CREATING_PROFILE' ? (
+          ) : solanaWallet.address && gameState !== 'CREATING_PROFILE' ? (
             <div className="text-center">
               <div className="text-4xl mb-4">✅</div>
               <h2 className="text-xl font-bold text-green-400 mb-2">Ready to Play</h2>
@@ -448,7 +353,7 @@ export default function Home() {
 
               <div className="mt-3 flex gap-2 justify-center relative">
                 {/* Custom button overlay */}
-                <div className="relative hover:scale-105 transition-transform duration-200 z-10 cursor-pointer" onClick={handleSignOut}>
+                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
                   <Image 
                     src="/images/Button1.png" 
                     alt="Sign Out" 
@@ -460,6 +365,8 @@ export default function Home() {
                     SIGN OUT
                   </span>
                 </div>
+                {/* Hidden actual SignOutButton positioned behind */}
+                <SignOutButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
               </div>
             </div>
           ) : gameState === 'CREATING_PROFILE' ? (
@@ -471,16 +378,6 @@ export default function Home() {
                   ? 'Creating your game profile' 
                   : 'Creating your account and profile'}
               </p>
-              <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4 mb-4">
-                <p className="text-sm text-blue-300 mb-2">
-                  <strong>📧 Check your email for OTP verification</strong>
-                </p>
-                <p className="text-xs text-blue-200">
-                  • Look for an email from Civic Auth<br/>
-                  • Enter the verification code when prompted<br/>
-                  • Check spam folder if not received
-                </p>
-              </div>
               <p className="text-sm text-gray-400">
                 Please confirm the transaction in your wallet
               </p>
