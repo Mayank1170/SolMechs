@@ -158,13 +158,28 @@ export default function Home() {
       alert("Please sign in first");
       return;
     }
+
+    // Validate wallet is ready for signing
+    if (!activeWallet.wallet || !activeWallet.wallet.signTransaction) {
+      alert("Wallet is not ready for signing. Please reconnect your wallet.");
+      setGameState('CONNECTING');
+      return;
+    }
+
+    // Check user authentication status
+    if (!user?.isAuthenticated) {
+      alert("Please authenticate first to create your profile.");
+      setGameState('CONNECTING');
+      return;
+    }
+
     // Use default name based on wallet address
     const defaultName = "Player_" + activeWallet.address.slice(-4);
 
     setIsLoading(true);
     try {
       // Create user + profile in one transaction (first time user)
-      // console.log("🆕 Creating new user with profile...");
+      console.log("🆕 Creating new user with profile...");
       const {
         createNewUserWithProfileTransaction: txResponse
       } = await client.createNewUserWithProfileTransaction({
@@ -179,7 +194,9 @@ export default function Home() {
         },
       });
 
-      // Use active wallet for signing
+      console.log("📧 Please check your email for OTP verification...");
+      
+      // Use active wallet for signing - this should trigger OTP email
       const result = await sendClientTransactions(
         client,
         activeWallet.wallet,
@@ -220,10 +237,24 @@ export default function Home() {
       return;
     }
 
+    // Validate wallet is ready for signing
+    if (!activeWallet.wallet || !activeWallet.wallet.signTransaction) {
+      alert("Wallet is not ready for signing. Please reconnect your wallet.");
+      setGameState('CONNECTING');
+      return;
+    }
+
+    // Check user authentication status
+    if (!user?.isAuthenticated) {
+      alert("Please authenticate first to create your profile.");
+      setGameState('CONNECTING');
+      return;
+    }
+
     setIsLoading(true);
     try {
       // User exists, just create profile for this project
-      // console.log("👤 Creating profile for existing user...");
+      console.log("👤 Creating profile for existing user...");
       const {
         createNewProfileTransaction: txResponse
       } = await client.createNewProfileTransaction({
@@ -232,7 +263,9 @@ export default function Home() {
         identity: "main",
       });
 
-      // Use active wallet for signing
+      console.log("📧 Please check your email for OTP verification...");
+
+      // Use active wallet for signing - this should trigger OTP email
       const result = await sendClientTransactions(
         client,
         activeWallet.wallet,
@@ -285,9 +318,26 @@ export default function Home() {
       // General simulation failure
       alert("❌ Transaction Failed\n\nThe transaction could not be completed. This might be due to:\n• Insufficient SOL balance\n• Network issues\n• Wallet configuration\n\nPlease check your wallet and try again.");
       setGameState('CONNECTING');
+    } else if (errorMessage.includes("Invalid wallet") || errorMessage.includes("wallet")) {
+      // Wallet-related errors - likely OTP/verification issue
+      alert("❌ Wallet Verification Required\n\nYour wallet needs to be verified to create a profile.\n\n" +
+            "Expected steps:\n" +
+            "1. Check your email for an OTP verification code\n" +
+            "2. Complete the verification process\n" +
+            "3. Try creating your profile again\n\n" +
+            "If you're not receiving emails, please check your spam folder or contact support.");
+      setGameState('CONNECTING');
+    } else if (errorMessage.includes("User rejected") || errorMessage.includes("cancelled")) {
+      // User cancelled transaction
+      alert("❌ Transaction Cancelled\n\nProfile creation was cancelled. Please try again to continue playing.");
+      setGameState('CONNECTING');
     } else {
       // Other errors
-      alert("❌ Error creating profile:\n\n" + errorMessage);
+      alert("❌ Error creating profile:\n\n" + errorMessage + 
+            "\n\nIf this is an authentication issue, please:\n" +
+            "• Check your email for verification codes\n" +
+            "• Ensure your wallet is properly connected\n" +
+            "• Try refreshing the page and reconnecting");
       setGameState('CONNECTING');
     }
   };
@@ -314,6 +364,29 @@ export default function Home() {
     // Reset states when going back
     setUserExists(false);
     setProfileExists(false);
+  };
+
+  const handleRetryConnection = async () => {
+    try {
+      setIsLoading(true);
+      setGameState('CONNECTING');
+      
+      // Reset states
+      setUserExists(false);
+      setProfileExists(false);
+      
+      // Wait a moment then try again
+      setTimeout(async () => {
+        if (user?.isAuthenticated && civicWallet.address) {
+          await checkUserAndProfile();
+        }
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error retrying connection:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Main render logic
@@ -398,6 +471,16 @@ export default function Home() {
                   ? 'Creating your game profile' 
                   : 'Creating your account and profile'}
               </p>
+              <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-300 mb-2">
+                  <strong>📧 Check your email for OTP verification</strong>
+                </p>
+                <p className="text-xs text-blue-200">
+                  • Look for an email from Civic Auth<br/>
+                  • Enter the verification code when prompted<br/>
+                  • Check spam folder if not received
+                </p>
+              </div>
               <p className="text-sm text-gray-400">
                 Please confirm the transaction in your wallet
               </p>
