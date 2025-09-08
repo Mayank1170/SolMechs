@@ -243,8 +243,8 @@ export default function UnityPage() {
         alignItems: "center"
       }}>
         <div style={{
-          width: "800px",
-          height: "660px",
+          width: "783px",
+          height: "683px",
           background: "#000",
           overflow: "hidden",
           position: "relative"
@@ -259,8 +259,8 @@ export default function UnityPage() {
             <canvas 
               ref={canvasRef}
               id="unity-canvas"
-              width={420} 
-              height={280}
+              width={783} 
+              height={683}
               style={{
                 width: "100%",
                 height: "100%"

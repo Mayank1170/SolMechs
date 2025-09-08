@@ -11,8 +11,8 @@ const mekMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Honeycomb Integration',
-  description: 'Honeycomb Protocol Integration App',
+  title: 'SolMechs',
+  description: '',
 }
 
 export default function RootLayout({

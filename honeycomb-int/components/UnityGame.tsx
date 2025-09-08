@@ -28,7 +28,7 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
       // Expose Web3 functions to Unity iframe
       (window as any).web3Bridge = {
         mintReward: async (amount: number) => {
-          console.log(`🏆 Unity called: Mint ${amount} reward tokens`);
+          // console.log(`🏆 Unity called: Mint ${amount} reward tokens`);
           // Show notification in the game
           alert(`🎉 Victory! You earned ${amount} SolMechs tokens!\n\nWallet: ${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}\n\n(Real blockchain minting will be integrated here)`);
           
@@ -39,28 +39,28 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
         },
           
         getBalance: async () => {
-          console.log('💰 Unity called: Get user balance');
+          // console.log('💰 Unity called: Get user balance');
           // TODO: Integrate with your existing checkPointBalance function
           // Example: return await checkPointBalance();
           
           // For now, return mock balance
           const mockBalance = Math.floor(Math.random() * 500) + 100;
-          console.log(`💰 Returning balance: ${mockBalance} tokens`);
+          // console.log(`💰 Returning balance: ${mockBalance} tokens`);
           return mockBalance;
         },
         
         getWalletAddress: () => {
-          console.log('🔗 Unity called: Get wallet address');
+          // console.log('🔗 Unity called: Get wallet address');
           return walletAddress;
         },
         
         onGameWin: async () => {
-          console.log('🎉 Unity: Player won the game!');
+          // console.log('🎉 Unity: Player won the game!');
           return await (window as any).web3Bridge.mintReward(10);
         },
         
         onGameLose: () => {
-          console.log('😔 Unity: Player lost the game');
+          // console.log('😔 Unity: Player lost the game');
           return false;
         },
         
@@ -70,7 +70,7 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
         }
       };
 
-      console.log('✅ Web3 Bridge initialized for Unity communication');
+      // console.log('✅ Web3 Bridge initialized for Unity communication');
     }
 
     return () => {
