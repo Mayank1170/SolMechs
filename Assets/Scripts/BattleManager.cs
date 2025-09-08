@@ -33,10 +33,16 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private float attackFxDuration = 0.80f; // wait this long after PlayAttackFx BEFORE applying damage
     [SerializeField] private float fxDestroyDelay = 0.12f;   // tiny extra wait after destruction visual
 
+    // === Tower Integration (NEW) ===
+    [Header("Tower Integration")]
+    [Tooltip("Optional: Tower progression handler. If not set, will be auto-found at runtime.")]
+    [SerializeField] private TowerProgressionHandler towerProgressionHandler;
+
     // Bootstrap
     private void Start()
     {
         uiManager = uiManager != null ? uiManager : (ui != null ? ui : FindObjectOfType<UIManager>());
+        if (towerProgressionHandler == null) towerProgressionHandler = FindObjectOfType<TowerProgressionHandler>();
 
         if (playerLoader != null) playerUnit = playerLoader.GetUnitData();
         if (enemyLoader != null) enemyUnit = enemyLoader.GetUnitData();
@@ -443,6 +449,18 @@ public class BattleManager : MonoBehaviour
         uiManager.HideBackButton(); // safety
         uiManager.DisableAllButtons();
         uiManager.ShowBattleResult(playerWon, 0);
+
+        // === NEW === ensure Tower gets notified (next frame) so it can override the overlay
+        if (towerProgressionHandler == null) towerProgressionHandler = FindObjectOfType<TowerProgressionHandler>();
+        if (towerProgressionHandler != null)
+            StartCoroutine(NotifyTowerAfterOverlay(playerWon));
+    }
+
+    // === NEW: let UI overlay appear for one frame, then hand control to Tower ===
+    private IEnumerator NotifyTowerAfterOverlay(bool playerWon)
+    {
+        yield return null; // wait one frame
+        towerProgressionHandler.OnBattleEnd(playerWon);
     }
 
     // === TIMER: timeouts -> instant end ===
