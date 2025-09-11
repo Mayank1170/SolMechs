@@ -125,6 +125,13 @@ export default function UnityPage() {
           companyName: "DefaultCompany",
           productName: "MechBattle",
           productVersion: "1.0",
+          // Add WASM loading options
+          wasmMemoryOptions: {
+            initial: 256,
+            maximum: 2048
+          },
+          // Disable compression for custom domains
+          compressionFormat: null
         }
         
         // console.log('🔧 Unity build URL:', buildUrl)
@@ -204,7 +211,26 @@ export default function UnityPage() {
             
         }).catch((message: string) => {
           console.error("PSG1 WebGL Load Error:", message)
-          alert("PSG1 WebGL Load Error: " + message)
+          
+          // Log additional debug info for EM_ASM errors
+          if (message.includes("EM_ASM") || message.includes("TypeError: Cannot read properties of undefined")) {
+            // console.error("🔍 Debug Info:")
+            // console.error("- Current domain:", window.location.hostname)
+            // console.error("- Build URL:", buildUrl)
+            // console.error("- WASM URL:", buildUrl + "/webgl-build.wasm")
+            
+            // Test WASM file accessibility
+            fetch(buildUrl + "/webgl-build.wasm")
+              .then(response => {
+                console.error("- WASM fetch response:", response.status, response.statusText)
+                // console.error("- Content-Type:", response.headers.get('content-type'))
+                // console.error("- Content-Encoding:", response.headers.get('content-encoding'))
+                // console.error("- Content-Length:", response.headers.get('content-length'))
+              })
+              .catch(e => console.error("- WASM fetch failed:", e))
+          }
+          
+          alert("PSG1 WebGL Load Error: " + message + "\n\nCheck console for debug info.")
         })
 
       } catch (error) {
