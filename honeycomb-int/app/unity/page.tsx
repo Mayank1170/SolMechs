@@ -117,7 +117,26 @@ export default function UnityPage() {
           devicePixelRatio: 1
         }
         
-        // console.log('🔧 Unity build URL:', buildUrl)
+        console.log('🔧 Unity build URL:', buildUrl)
+        console.log('🔧 Unity config:', config)
+        
+        // Test file accessibility before Unity initialization
+        const testFiles = async () => {
+          try {
+            const dataResponse = await fetch(config.dataUrl, { method: 'HEAD' })
+            console.log('📄 Data file accessible:', dataResponse.ok, dataResponse.status)
+            
+            const frameworkResponse = await fetch(config.frameworkUrl, { method: 'HEAD' })
+            console.log('📄 Framework file accessible:', frameworkResponse.ok, frameworkResponse.status)
+            
+            const wasmResponse = await fetch(config.codeUrl, { method: 'HEAD' })
+            console.log('📄 WASM file accessible:', wasmResponse.ok, wasmResponse.status)
+          } catch (e) {
+            console.error('❌ File accessibility test failed:', e)
+          }
+        }
+        
+        await testFiles()
 
         // Prevent orientation changes before Unity loads
         const preventOrientationChange = () => {
@@ -162,7 +181,9 @@ export default function UnityPage() {
         // // console.log('✅ createUnityInstance confirmed available, starting Unity...')
         
         // @ts-ignore - createUnityInstance is loaded as a global function by Unity
+        console.log('🎮 Starting Unity initialization...')
         createUnityInstance(canvas, config, (progress: number) => {
+          console.log('Unity loading progress:', Math.round(progress * 100) + '%')
           progressBarFull.style.width = 100 * progress + "%"
         }).then((unityInstance: any) => {
           loadingBar.style.display = "none"
