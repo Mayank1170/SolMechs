@@ -28,21 +28,14 @@ export default function UnityPage() {
         // console.log('🗂️ Script path:', '/unity/Build/webgl-build.loader.js')
         
         const script = document.createElement('script')
-        // Use absolute URL in production to ensure it loads correctly
-        const isProduction = window.location.hostname !== 'localhost' && 
-                            window.location.hostname !== '127.0.0.1'
-        
-        const scriptSrc = isProduction 
-          ? `${window.location.origin}/unity/Build/webgl-build.loader.js`
-          : '/unity/Build/webgl-build.loader.js'
+        const scriptSrc = '/unity/Build/webgl-build.loader.js'
         
         // console.log('🔗 Using script source:', scriptSrc)
         script.src = scriptSrc
         
-        // Add script attributes for better loading
-        script.async = false
+        // Conservative script loading
+        script.async = true
         script.defer = false
-        script.crossOrigin = 'anonymous'
         
         script.onload = () => {
           // console.log('✅ Unity loader script loaded successfully')
@@ -109,13 +102,8 @@ export default function UnityPage() {
         const loadingBar = loadingBarRef.current
         const progressBarFull = progressBarRef.current
 
-        // Use absolute URLs in production to ensure assets load correctly
-        const isProduction = window.location.hostname !== 'localhost' && 
-                            window.location.hostname !== '127.0.0.1'
-        
-        const buildUrl = isProduction
-          ? `${window.location.origin}/unity/Build`
-          : "/unity/Build"
+        // Simple path resolution to avoid issues
+        const buildUrl = "/unity/Build"
         
         const config = {
           dataUrl: buildUrl + "/webgl-build.data",
@@ -124,14 +112,7 @@ export default function UnityPage() {
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DefaultCompany",
           productName: "MechBattle",
-          productVersion: "1.0",
-          // Add WASM loading options
-          wasmMemoryOptions: {
-            initial: 256,
-            maximum: 2048
-          },
-          // Disable compression for custom domains
-          compressionFormat: null
+          productVersion: "1.0"
         }
         
         // console.log('🔧 Unity build URL:', buildUrl)
