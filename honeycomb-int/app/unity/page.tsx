@@ -122,9 +122,9 @@ export default function UnityPage() {
         // Prevent orientation changes before Unity loads
         const preventOrientationChange = () => {
           // Lock to current orientation if possible
-          if (screen.orientation && screen.orientation.lock) {
+          if (screen.orientation && (screen.orientation as any).lock) {
             try {
-              screen.orientation.lock('landscape-primary').catch(() => {
+              ;(screen.orientation as any).lock('landscape-primary').catch(() => {
                 // Fallback: disable orientation events
                 window.addEventListener('orientationchange', (e) => {
                   e.preventDefault()
@@ -135,6 +135,13 @@ export default function UnityPage() {
             } catch (e) {
               // Browser doesn't support orientation lock
             }
+          } else {
+            // Fallback: disable orientation events
+            window.addEventListener('orientationchange', (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              return false
+            }, true)
           }
         }
         
@@ -167,9 +174,9 @@ export default function UnityPage() {
           ;(window as any).unityInstance = unityInstance
           
           // Disable orientation change handling to prevent WASM memory errors
-          const originalHandler = screen.orientation?.addEventListener
-          if (originalHandler) {
-            screen.orientation.removeEventListener('change', () => {})
+          if (screen.orientation) {
+            // Remove any existing orientation change listeners
+            ;(screen.orientation as any).onchange = null
           }
           
           // Override window resize to prevent Unity orientation handler
