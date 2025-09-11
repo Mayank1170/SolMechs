@@ -102,8 +102,14 @@ export default function UnityPage() {
         const loadingBar = loadingBarRef.current
         const progressBarFull = progressBarRef.current
 
-        // Simple path resolution to avoid issues
-        const buildUrl = "/unity/Build"
+        // Use full URL in production to avoid path resolution issues
+        const isProduction = typeof window !== 'undefined' && 
+                            window.location.hostname !== 'localhost' && 
+                            window.location.hostname !== '127.0.0.1'
+        
+        const buildUrl = isProduction 
+          ? `${window.location.protocol}//${window.location.host}/unity/Build`
+          : "/unity/Build"
         
         const config = {
           dataUrl: buildUrl + "/webgl-build.data",
@@ -138,33 +144,7 @@ export default function UnityPage() {
         
         await testFiles()
 
-        // Prevent orientation changes before Unity loads
-        const preventOrientationChange = () => {
-          // Lock to current orientation if possible
-          if (screen.orientation && (screen.orientation as any).lock) {
-            try {
-              ;(screen.orientation as any).lock('landscape-primary').catch(() => {
-                // Fallback: disable orientation events
-                window.addEventListener('orientationchange', (e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  return false
-                }, true)
-              })
-            } catch (e) {
-              // Browser doesn't support orientation lock
-            }
-          } else {
-            // Fallback: disable orientation events
-            window.addEventListener('orientationchange', (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              return false
-            }, true)
-          }
-        }
-        
-        preventOrientationChange()
+        // Minimal setup to avoid conflicts
 
         loadingBar.style.display = "block"
 
@@ -194,18 +174,7 @@ export default function UnityPage() {
           // Make Unity instance globally available
           ;(window as any).unityInstance = unityInstance
           
-          // Disable orientation change handling to prevent WASM memory errors
-          if (screen.orientation) {
-            // Remove any existing orientation change listeners
-            ;(screen.orientation as any).onchange = null
-          }
-          
-          // Override window resize to prevent Unity orientation handler
-          const originalResize = window.onresize
-          window.onresize = (event) => {
-            // Don't trigger Unity's orientation change handler
-            return false
-          }
+          // Minimal post-load setup
           
           // PSG1 JavaScript Functions for Unity WebGL
           ;(window as any).GetWalletAddress = function() {
