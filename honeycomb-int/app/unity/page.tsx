@@ -112,10 +112,33 @@ export default function UnityPage() {
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DefaultCompany",
           productName: "MechBattle",
-          productVersion: "1.0"
+          productVersion: "1.0",
+          matchWebGLToCanvasSize: false,
+          devicePixelRatio: 1
         }
         
         // console.log('🔧 Unity build URL:', buildUrl)
+
+        // Prevent orientation changes before Unity loads
+        const preventOrientationChange = () => {
+          // Lock to current orientation if possible
+          if (screen.orientation && screen.orientation.lock) {
+            try {
+              screen.orientation.lock('landscape-primary').catch(() => {
+                // Fallback: disable orientation events
+                window.addEventListener('orientationchange', (e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  return false
+                }, true)
+              })
+            } catch (e) {
+              // Browser doesn't support orientation lock
+            }
+          }
+        }
+        
+        preventOrientationChange()
 
         loadingBar.style.display = "block"
 
@@ -142,6 +165,19 @@ export default function UnityPage() {
           
           // Make Unity instance globally available
           ;(window as any).unityInstance = unityInstance
+          
+          // Disable orientation change handling to prevent WASM memory errors
+          const originalHandler = screen.orientation?.addEventListener
+          if (originalHandler) {
+            screen.orientation.removeEventListener('change', () => {})
+          }
+          
+          // Override window resize to prevent Unity orientation handler
+          const originalResize = window.onresize
+          window.onresize = (event) => {
+            // Don't trigger Unity's orientation change handler
+            return false
+          }
           
           // PSG1 JavaScript Functions for Unity WebGL
           ;(window as any).GetWalletAddress = function() {
