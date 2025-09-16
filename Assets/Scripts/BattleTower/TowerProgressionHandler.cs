@@ -168,21 +168,52 @@ public class TowerProgressionHandler : MonoBehaviour
 
     private void ShowOneClimbContinue()
     {
-        if (progressionPanel == null) return;
+        // === PROTEÇÃO COMPLETA CONTRA NULL ===
+        if (progressionPanel == null)
+        {
+            Debug.LogWarning("[TowerProgressionHandler] ProgressionPanel is null - using auto-continue fallback");
+            StartCoroutine(AutoContinueWithoutUI());
+            return;
+        }
 
         progressionPanel.SetActive(true);
-        progressionTitle.text = $"FLOOR {currentFloor} CLEARED!";
-        progressionMessage.text = $"Well done! Your HP has been fully restored.\n" +
-                                  $"Ready for Floor {currentFloor + 1}?";
 
-        continueButton.gameObject.SetActive(true);
-        continueButton.GetComponentInChildren<Text>().text = $"Continue to Floor {currentFloor + 1}";
-        retryButton.gameObject.SetActive(false);
-        returnToMenuButton.gameObject.SetActive(true);
-        returnToMenuButton.GetComponentInChildren<Text>().text = "Give Up (End Run)";
+        // Proteger cada componente UI individualmente
+        if (progressionTitle != null)
+            progressionTitle.text = $"FLOOR {currentFloor} CLEARED!";
+
+        if (progressionMessage != null)
+            progressionMessage.text = $"Well done! Your HP has been fully restored.\nReady for Floor {currentFloor + 1}?";
+
+        if (continueButton != null)
+        {
+            continueButton.gameObject.SetActive(true);
+            var buttonText = continueButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+                buttonText.text = $"Continue to Floor {currentFloor + 1}";
+        }
+
+        if (retryButton != null)
+            retryButton.gameObject.SetActive(false);
+
+        if (returnToMenuButton != null)
+        {
+            returnToMenuButton.gameObject.SetActive(true);
+            var buttonText = returnToMenuButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+                buttonText.text = "Give Up (End Run)";
+        }
 
         // Auto-continue after delay for better flow (One Climb is uninterrupted)
         StartCoroutine(AutoContinueOneClimb());
+    }
+
+    // Fallback quando UI não está configurada
+    private IEnumerator AutoContinueWithoutUI()
+    {
+        Debug.Log($"Floor {currentFloor} cleared! Auto-advancing to Floor {currentFloor + 1}...");
+        yield return new WaitForSeconds(2.5f);
+        OnContinueClicked();
     }
 
     private IEnumerator AutoContinueOneClimb()
@@ -194,19 +225,33 @@ public class TowerProgressionHandler : MonoBehaviour
 
     private void ShowOneClimbComplete()
     {
-        if (oneClimbResultPanel == null) return;
+        if (oneClimbResultPanel == null)
+        {
+            Debug.LogWarning("[TowerProgressionHandler] OneClimbResultPanel is null - logging completion");
+            Debug.Log("🏆 PERFECT RUN! All 13 Floors Conquered! 🏆");
+            return;
+        }
 
         oneClimbBestRun = 13;
         SaveProgress(); // persist the perfect run
 
         oneClimbResultPanel.SetActive(true);
-        oneClimbFloorReached.text = "🏆 PERFECT RUN! 🏆";
-        oneClimbBestScore.text = "All 13 Floors Conquered!\nYou are a ONE CLIMB LEGEND!";
+
+        if (oneClimbFloorReached != null)
+            oneClimbFloorReached.text = "🏆 PERFECT RUN! 🏆";
+
+        if (oneClimbBestScore != null)
+            oneClimbBestScore.text = "All 13 Floors Conquered!\nYou are a ONE CLIMB LEGEND!";
     }
 
     private void ShowOneClimbDefeat()
     {
-        if (oneClimbResultPanel == null) return;
+        if (oneClimbResultPanel == null)
+        {
+            Debug.LogWarning("[TowerProgressionHandler] OneClimbResultPanel is null - logging defeat");
+            Debug.Log($"One Climb run ended. Floors cleared: {oneClimbCurrentRun}");
+            return;
+        }
 
         if (oneClimbCurrentRun > oneClimbBestRun)
         {
@@ -215,19 +260,29 @@ public class TowerProgressionHandler : MonoBehaviour
         }
 
         oneClimbResultPanel.SetActive(true);
-        oneClimbFloorReached.text = $"Run Ended at Floor {currentFloor}";
-        oneClimbBestScore.text = $"Floors Cleared: {oneClimbCurrentRun}\n" +
-                                 $"Personal Best: {oneClimbBestRun} floors";
 
-        if (oneClimbCurrentRun >= 10) oneClimbBestScore.text += "\nIncredible run!";
-        else if (oneClimbCurrentRun >= 7) oneClimbBestScore.text += "\nGreat progress!";
-        else if (oneClimbCurrentRun >= 4) oneClimbBestScore.text += "\nGood effort!";
-        else oneClimbBestScore.text += "\nKeep trying!";
+        if (oneClimbFloorReached != null)
+            oneClimbFloorReached.text = $"Run Ended at Floor {currentFloor}";
+
+        if (oneClimbBestScore != null)
+        {
+            oneClimbBestScore.text = $"Floors Cleared: {oneClimbCurrentRun}\nPersonal Best: {oneClimbBestRun} floors";
+
+            if (oneClimbCurrentRun >= 10) oneClimbBestScore.text += "\nIncredible run!";
+            else if (oneClimbCurrentRun >= 7) oneClimbBestScore.text += "\nGreat progress!";
+            else if (oneClimbCurrentRun >= 4) oneClimbBestScore.text += "\nGood effort!";
+            else oneClimbBestScore.text += "\nKeep trying!";
+        }
     }
 
     private void HandleBattleTowerResult(bool playerWon)
     {
-        if (progressionPanel == null) return;
+        if (progressionPanel == null)
+        {
+            Debug.LogWarning("[TowerProgressionHandler] ProgressionPanel is null - using console fallback");
+            Debug.Log($"Battle Tower Floor {currentFloor}: {(playerWon ? "VICTORY!" : "DEFEATED")}");
+            return;
+        }
 
         progressionPanel.SetActive(true);
 
@@ -252,41 +307,86 @@ public class TowerProgressionHandler : MonoBehaviour
 
             if (currentFloor >= 13)
             {
-                progressionTitle.text = "🎊 TOWER COMPLETE! 🎊";
-                progressionMessage.text = "Congratulations! You've conquered the Battle Tower!\n" +
-                                          "All floors are now unlocked for replay.";
-                continueButton.gameObject.SetActive(false);
-                retryButton.gameObject.SetActive(false);
-                returnToMenuButton.gameObject.SetActive(true);
-                returnToMenuButton.GetComponentInChildren<Text>().text = "Return to Tower Menu";
+                if (progressionTitle != null)
+                    progressionTitle.text = "🎊 TOWER COMPLETE! 🎊";
+
+                if (progressionMessage != null)
+                    progressionMessage.text = "Congratulations! You've conquered the Battle Tower!\nAll floors are now unlocked for replay.";
+
+                if (continueButton != null)
+                    continueButton.gameObject.SetActive(false);
+                if (retryButton != null)
+                    retryButton.gameObject.SetActive(false);
+
+                if (returnToMenuButton != null)
+                {
+                    returnToMenuButton.gameObject.SetActive(true);
+                    var buttonText = returnToMenuButton.GetComponentInChildren<Text>();
+                    if (buttonText != null)
+                        buttonText.text = "Return to Tower Menu";
+                }
             }
             else
             {
-                progressionTitle.text = "VICTORY!";
-                progressionMessage.text = $"Floor {currentFloor} Conquered!\n" +
-                                          $"Floor {currentFloor + 1} is now unlocked!";
+                if (progressionTitle != null)
+                    progressionTitle.text = "VICTORY!";
 
-                continueButton.gameObject.SetActive(true);
-                continueButton.GetComponentInChildren<Text>().text = $"Challenge Floor {currentFloor + 1}";
-                retryButton.gameObject.SetActive(true);
-                retryButton.GetComponentInChildren<Text>().text = $"Replay Floor {currentFloor}";
-                returnToMenuButton.gameObject.SetActive(true);
-                returnToMenuButton.GetComponentInChildren<Text>().text = "Tower Menu";
+                if (progressionMessage != null)
+                    progressionMessage.text = $"Floor {currentFloor} Conquered!\nFloor {currentFloor + 1} is now unlocked!";
+
+                if (continueButton != null)
+                {
+                    continueButton.gameObject.SetActive(true);
+                    var buttonText = continueButton.GetComponentInChildren<Text>();
+                    if (buttonText != null)
+                        buttonText.text = $"Challenge Floor {currentFloor + 1}";
+                }
+
+                if (retryButton != null)
+                {
+                    retryButton.gameObject.SetActive(true);
+                    var buttonText = retryButton.GetComponentInChildren<Text>();
+                    if (buttonText != null)
+                        buttonText.text = $"Replay Floor {currentFloor}";
+                }
+
+                if (returnToMenuButton != null)
+                {
+                    returnToMenuButton.gameObject.SetActive(true);
+                    var buttonText = returnToMenuButton.GetComponentInChildren<Text>();
+                    if (buttonText != null)
+                        buttonText.text = "Tower Menu";
+                }
             }
         }
         else
         {
-            progressionTitle.text = "DEFEATED";
-            int attempts = floorAttempts.ContainsKey(currentFloor) ? floorAttempts[currentFloor] : 1;
-            progressionMessage.text = $"Floor {currentFloor} proved too challenging.\n" +
-                                      $"Attempts: {attempts}\n" +
-                                      "Adjust your strategy and try again!";
+            if (progressionTitle != null)
+                progressionTitle.text = "DEFEATED";
 
-            continueButton.gameObject.SetActive(false);
-            retryButton.gameObject.SetActive(true);
-            retryButton.GetComponentInChildren<Text>().text = $"Retry Floor {currentFloor}";
-            returnToMenuButton.gameObject.SetActive(true);
-            returnToMenuButton.GetComponentInChildren<Text>().text = "Tower Menu (Change Mech)";
+            int attempts = floorAttempts.ContainsKey(currentFloor) ? floorAttempts[currentFloor] : 1;
+
+            if (progressionMessage != null)
+                progressionMessage.text = $"Floor {currentFloor} proved too challenging.\nAttempts: {attempts}\nAdjust your strategy and try again!";
+
+            if (continueButton != null)
+                continueButton.gameObject.SetActive(false);
+
+            if (retryButton != null)
+            {
+                retryButton.gameObject.SetActive(true);
+                var buttonText = retryButton.GetComponentInChildren<Text>();
+                if (buttonText != null)
+                    buttonText.text = $"Retry Floor {currentFloor}";
+            }
+
+            if (returnToMenuButton != null)
+            {
+                returnToMenuButton.gameObject.SetActive(true);
+                var buttonText = returnToMenuButton.GetComponentInChildren<Text>();
+                if (buttonText != null)
+                    buttonText.text = "Tower Menu (Change Mech)";
+            }
         }
     }
 
@@ -318,8 +418,11 @@ public class TowerProgressionHandler : MonoBehaviour
 
             if (isUnlocked)
             {
-                btnText.text = $"Floor {floor}";
-                if (victories > 0) btnText.text += $" ✓ ({victories})";
+                if (btnText != null)
+                {
+                    btnText.text = $"Floor {floor}";
+                    if (victories > 0) btnText.text += $" ✓ ({victories})";
+                }
 
                 btn.interactable = true;
                 int floorToPlay = floor;
@@ -327,7 +430,8 @@ public class TowerProgressionHandler : MonoBehaviour
             }
             else
             {
-                btnText.text = $"Floor {floor} 🔒";
+                if (btnText != null)
+                    btnText.text = $"Floor {floor} 🔒";
                 btn.interactable = false;
             }
         }
@@ -378,7 +482,7 @@ public class TowerProgressionHandler : MonoBehaviour
     private IEnumerator RestartBattleForNextFloor()
     {
         // 1. Limpar UIs
-        if (uiManager != null) 
+        if (uiManager != null)
         {
             uiManager.HideBattleResult();
             uiManager.DisableAllButtons();
@@ -390,17 +494,17 @@ public class TowerProgressionHandler : MonoBehaviour
         if (battleManager != null)
         {
             // Usar reflection para acessar battleOver se necessário
-            var battleOverField = typeof(BattleManager).GetField("battleOver", 
+            var battleOverField = typeof(BattleManager).GetField("battleOver",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (battleOverField != null)
                 battleOverField.SetValue(battleManager, false);
 
             RestoreFullHP();
             battleManager.Initialize(battleManager.playerUnit, battleManager.enemyUnit, uiManager);
-            
+
             if (uiManager != null)
             {
-                uiManager.InitializeHealthBars(battleManager.playerUnit, battleManager.enemyUnit, 
+                uiManager.InitializeHealthBars(battleManager.playerUnit, battleManager.enemyUnit,
                     battleManager.playerMaxHPs, battleManager.enemyMaxHPs);
             }
         }
@@ -435,7 +539,7 @@ public class TowerProgressionHandler : MonoBehaviour
         {
             if (battleManager.playerMaxHPs.ContainsKey(ModuleSlot.Matrix))
                 battleManager.playerUnit.matrixHP = battleManager.playerMaxHPs[ModuleSlot.Matrix];
-            
+
             foreach (var slot in battleManager.playerUnit.partStatuses.Keys)
             {
                 if (battleManager.playerMaxHPs.ContainsKey(slot))
@@ -448,7 +552,7 @@ public class TowerProgressionHandler : MonoBehaviour
         {
             if (battleManager.enemyMaxHPs.ContainsKey(ModuleSlot.Matrix))
                 battleManager.enemyUnit.matrixHP = battleManager.enemyMaxHPs[ModuleSlot.Matrix];
-            
+
             foreach (var slot in battleManager.enemyUnit.partStatuses.Keys)
             {
                 if (battleManager.enemyMaxHPs.ContainsKey(slot))
@@ -495,7 +599,7 @@ public class TowerProgressionHandler : MonoBehaviour
     private IEnumerator RestartBattleForRetry()
     {
         // Limpar UI
-        if (uiManager != null) 
+        if (uiManager != null)
         {
             uiManager.HideBattleResult();
             uiManager.DisableAllButtons();
@@ -506,17 +610,17 @@ public class TowerProgressionHandler : MonoBehaviour
         // Reset battle manager
         if (battleManager != null)
         {
-            var battleOverField = typeof(BattleManager).GetField("battleOver", 
+            var battleOverField = typeof(BattleManager).GetField("battleOver",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (battleOverField != null)
                 battleOverField.SetValue(battleManager, false);
 
             RestoreFullHP();
             battleManager.Initialize(battleManager.playerUnit, battleManager.enemyUnit, uiManager);
-            
+
             if (uiManager != null)
             {
-                uiManager.InitializeHealthBars(battleManager.playerUnit, battleManager.enemyUnit, 
+                uiManager.InitializeHealthBars(battleManager.playerUnit, battleManager.enemyUnit,
                     battleManager.playerMaxHPs, battleManager.enemyMaxHPs);
             }
         }
