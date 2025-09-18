@@ -270,7 +270,7 @@ export default function UnityPage() {
       minHeight: "100vh",
       overflow: "hidden"
     }}>
-      <div className="max-h-[740px] max-w-[700px]" style={{
+      <div className="max-h-[900px] max-w-[900px]" style={{
         position: "relative",
         width: "100%",
         height: "100%",
