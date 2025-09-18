@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 571fc33cf5ffc384f936636e0c1412b2, type: 3}
-  m_Name: LA05
+  m_Name: IN05
   m_EditorClassIdentifier: 
   partCode: IN05
   partName: Solus Thrusters
@@ -29,4 +29,4 @@ MonoBehaviour:
     targetType: 1
     effect: +1 SPD
   rawData: 
-  editorSprite: {fileID: 0}
+  editorSprite: {fileID: 21300000, guid: 8f57b2a7402ba3843a61b5eae1a3fe02, type: 3}

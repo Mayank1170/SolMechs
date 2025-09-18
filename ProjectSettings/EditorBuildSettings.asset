@@ -17,25 +17,25 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/0_TitleConnect.unity
     guid: d956aa15860c71b4d8175614ba782be6
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/4_PlayPvP.unity
     guid: 12f313ae7b26c0a4694d558d87a19f45
   - enabled: 0
     path: 
-    guid: 80c4d9cd297341b4eb85f0c3192bf32b
+    guid: 00000000000000000000000000000000
   - enabled: 0
     path: Assets/Scenes/2_MechEditorScene.unity
     guid: a3d99b583f7894c4e865c99ec7bc79ba
   - enabled: 0
     path: 
     guid: 00000000000000000000000000000000
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/6_LocalPvP.unity
     guid: befdc951599a82a44a609e1e78d5c547
   - enabled: 0
     path: 
-    guid: 80c4d9cd297341b4eb85f0c3192bf32b
-  - enabled: 1
+    guid: 00000000000000000000000000000000
+  - enabled: 0
     path: Assets/Samples/Play Solana Unity SDK/1.1.0/PSG1 Input Bindings/SampleScene.unity
     guid: ae156068c809ca532a41b1bc8ff40a4c
   - enabled: 1
