@@ -22,7 +22,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={mekMono.variable}>
-      <body className={`${mekMono.className} font-mek bg-cover bg-center bg-no-repeat min-h-screen`} style={{backgroundImage: "url('/images/bg.png')"}}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
+      <body className={`${mekMono.className} font-mek bg-cover bg-center bg-no-repeat min-h-screen overflow-x-hidden`} 
+            style={{backgroundImage: "url('/images/bg.png')", backgroundAttachment: 'fixed'}}>
         <WalletProviders>
           {children}
         </WalletProviders>

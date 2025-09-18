@@ -24,6 +24,102 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  
+  /* Mobile optimizations */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px; /* Slightly smaller base font size on mobile */
+  }
+  
+  /* Prevent zoom on input focus on mobile Safari */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Wallet modal mobile responsiveness */
+@media (max-width: 640px) {
+  .unified-wallet-modal {
+    margin: 1rem !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+  
+  .unified-wallet-modal .wallet-list {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Jupiter wallet adapter button adjustments */
+  .unified-wallet-modal .wallet-adapter-button {
+    padding: 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* QR code modal adjustments */
+  .unified-wallet-modal .qr-code-container {
+    max-width: 200px !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* Responsive background image */
+@media (max-width: 640px) {
+  body {
+    background-size: cover !important;
+    background-attachment: scroll !important; /* Fixed attachment can cause issues on mobile */
+  }
+}
+
+/* Unity Game - Simplified Responsive Design */
+.unity-game-container {
+  /* Ensure no overflow */
+  box-sizing: border-box;
+  overflow: hidden !important;
+}
+
+.unity-game-container iframe {
+  /* Ensure iframe stays within bounds */
+  box-sizing: border-box;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Button frame responsive improvements */
+@media (max-width: 480px) {
+  /* Extra small mobile adjustments */
+  .button-frame {
+    min-width: 140px !important;
+    max-width: 180px !important;
+  }
+  
+  .button-frame span {
+    font-size: 0.75rem !important;
+    padding: 0 0.5rem !important;
+    letter-spacing: 0.05em !important;
+  }
+  
+  /* Very small screens - reduce button size further */
+  @media (max-width: 360px) {
+    .button-frame {
+      min-width: 120px !important;
+      max-width: 160px !important;
+    }
+    
+    .button-frame span {
+      font-size: 0.7rem !important;
+    }
+  }
 }
 
 @layer utilities {

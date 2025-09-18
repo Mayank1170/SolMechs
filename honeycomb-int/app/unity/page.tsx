@@ -261,7 +261,7 @@ export default function UnityPage() {
     <div style={{ 
       margin: 0, 
       padding: 0, 
-      background: "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)",
+      // background: "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)",
       backgroundAttachment: "fixed",
       fontFamily: "Arial, sans-serif",
       display: "flex",
@@ -270,11 +270,12 @@ export default function UnityPage() {
       minHeight: "100vh",
       overflow: "hidden"
     }}>
-      <div style={{
+      <div className="max-h-[740px] max-w-[700px]" style={{
         position: "relative",
-        width: "940px",
-        height: "780px",
-        backgroundImage: "url('/unity/OverlayPSG1.png')",
+        width: "100%",
+        height: "100%",
+        // maxHeight: "94px",
+        // backgroundImage: "url('/unity/OverlayPSG1.png')",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
         backgroundSize: "contain",
@@ -283,8 +284,8 @@ export default function UnityPage() {
         alignItems: "center"
       }}>
         <div style={{
-          width: "783px",
-          height: "683px",
+          width: "100%",
+          height: "100%",
           background: "#000",
           overflow: "hidden",
           position: "relative"
