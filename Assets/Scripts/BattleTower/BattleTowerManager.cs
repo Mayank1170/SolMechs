@@ -276,12 +276,10 @@ public class BattleTowerManager : MonoBehaviour
         }
         else
         {
-            // Battle Tower - show progress and allow floor selection
+            // Battle Tower - immediately open floor selection so the player chooses next fight
+            // (keeps the list visible instead of forcing only "continue")
             if (progressionHandler != null)
-            {
-                // could open selection UI if desired
-                // progressionHandler.ShowFloorSelection();
-            }
+                progressionHandler.ShowFloorSelection(); // <-- ADDED
         }
 
         UpdateTowerUI();
@@ -348,7 +346,10 @@ public class BattleTowerManager : MonoBehaviour
                 }
                 else
                 {
-                    bool isUnlocked = floorsCompleted.ContainsKey(currentFloor) || currentFloor == 1;
+                    // Safer unlocked check: only true if key exists AND value is true (or floor 1)
+                    bool isUnlocked = currentFloor == 1
+                        || (floorsCompleted.TryGetValue(currentFloor, out bool unlocked) && unlocked); // <-- CHANGED (safe check)
+
                     if (isUnlocked)
                     {
                         startFloorButton.GetComponentInChildren<Text>().text = $"Fight: {enemyName}";

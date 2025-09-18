@@ -179,7 +179,7 @@ export default function Home() {
     }
   };
 
-]  const autoCreateWallet = async () => {
+  const autoCreateWallet = async () => {
     if (!user || !('createWallet' in user)) return;
     
     setIsLoading(true);
