@@ -24,4 +24,4 @@ MonoBehaviour:
     PROC: 0
   passive1: Solana Speed
   passive2: Huge Community
-  editorSprite: {fileID: 21300000, guid: 64d3fc0396e422540bf6da746b95fce4, type: 3}
+  editorSprite: {fileID: 21300000, guid: c2bb6fdd08f207948981e2b04916c0e3, type: 3}
