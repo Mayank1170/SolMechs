@@ -37,6 +37,10 @@ public class TowerProgressionHandler : MonoBehaviour
     public Transform floorButtonContainer;
     public GameObject floorButtonPrefab;
 
+    [Header("Floor Selection ScrollView")]
+    public ScrollRect floorScrollRect;
+    public float autoScrollDelay = 0.1f;
+
     // Tower state
     private bool isInTowerBattle = false;
     private bool isOneClimbMode = false;
@@ -53,6 +57,7 @@ public class TowerProgressionHandler : MonoBehaviour
     {
         SetupUI();
         LoadProgress();
+        SetupScrollView();
     }
 
     private void SetupUI()
@@ -69,6 +74,18 @@ public class TowerProgressionHandler : MonoBehaviour
             retryButton.onClick.AddListener(OnRetryClicked);
         if (oneClimbReturnButton)
             oneClimbReturnButton.onClick.AddListener(OnOneClimbReturnClicked);
+    }
+
+    private void SetupScrollView()
+    {
+        if (floorScrollRect == null && floorSelectPanel != null)
+        {
+            floorScrollRect = floorSelectPanel.GetComponentInChildren<ScrollRect>();
+            if (floorScrollRect == null)
+            {
+                Debug.LogWarning("[TowerProgression] ScrollRect not found in floorSelectPanel. Auto-scroll disabled.");
+            }
+        }
     }
 
     // Called by BattleTowerManager when starting a tower battle
@@ -228,7 +245,7 @@ public class TowerProgressionHandler : MonoBehaviour
         if (oneClimbResultPanel == null)
         {
             Debug.LogWarning("[TowerProgressionHandler] OneClimbResultPanel is null - logging completion");
-            Debug.Log("🏆 PERFECT RUN! All 13 Floors Conquered! 🏆");
+            Debug.Log("PERFECT RUN! All 13 Floors Conquered!");
             return;
         }
 
@@ -238,7 +255,7 @@ public class TowerProgressionHandler : MonoBehaviour
         oneClimbResultPanel.SetActive(true);
 
         if (oneClimbFloorReached != null)
-            oneClimbFloorReached.text = "🏆 PERFECT RUN! 🏆";
+            oneClimbFloorReached.text = "PERFECT RUN!";
 
         if (oneClimbBestScore != null)
             oneClimbBestScore.text = "All 13 Floors Conquered!\nYou are a ONE CLIMB LEGEND!";
@@ -308,7 +325,7 @@ public class TowerProgressionHandler : MonoBehaviour
             if (currentFloor >= 13)
             {
                 if (progressionTitle != null)
-                    progressionTitle.text = "🎊 TOWER COMPLETE! 🎊";
+                    progressionTitle.text = "TOWER COMPLETE!";
 
                 if (progressionMessage != null)
                     progressionMessage.text = "Congratulations! You've conquered the Battle Tower!\nAll floors are now unlocked for replay.";
@@ -393,18 +410,65 @@ public class TowerProgressionHandler : MonoBehaviour
     public void ShowFloorSelection()
     {
         if (floorSelectPanel == null) return;
+
         floorSelectPanel.SetActive(true);
         RefreshFloorButtons();
+
+        // Auto-scroll para o andar apropriado após criar os botões
+        StartCoroutine(AutoScrollToAppropriateFloor());
+    }
+
+    private IEnumerator AutoScrollToAppropriateFloor()
+    {
+        // Aguarda os botões serem criados
+        yield return new WaitForSeconds(autoScrollDelay);
+
+        if (floorScrollRect == null) yield break;
+
+        int targetFloor = GetTargetFloorForScroll();
+        ScrollToFloor(targetFloor);
+    }
+
+    private int GetTargetFloorForScroll()
+    {
+        // Encontra o andar mais alto desbloqueado
+        int highestUnlocked = GetHighestUnlockedFloor();
+
+        // Se torre completa, foca no último andar
+        if (highestUnlocked >= 13)
+            return 13;
+
+        // Senão, foca no próximo andar a ser desbloqueado
+        return Mathf.Min(highestUnlocked + 1, 13);
+    }
+
+    private void ScrollToFloor(int targetFloor)
+    {
+        if (floorScrollRect == null || floorButtonContainer == null) return;
+
+        // CORREÇÃO: Para ordem inversa (Floor 13 no topo, Floor 1 embaixo)
+        // Floor 13 = topo (1.0), Floor 1 = fundo (0.0)
+        float normalizedPosition = 1f - ((float)(targetFloor - 1) / 12f);
+
+        // Clamp para garantir valores válidos
+        normalizedPosition = Mathf.Clamp01(normalizedPosition);
+
+        // Define a posição do scroll
+        floorScrollRect.verticalNormalizedPosition = normalizedPosition;
+
+        Debug.Log($"[TowerProgression] Auto-scrolled to floor {targetFloor} (pos: {normalizedPosition:F2})");
     }
 
     private void RefreshFloorButtons()
     {
+        if (floorButtonContainer == null) return;
+
         // Clear existing buttons
         foreach (Transform child in floorButtonContainer)
             Destroy(child.gameObject);
 
-        // Create button for each floor
-        for (int floor = 1; floor <= 13; floor++)
+        // CORREÇÃO: Create buttons em ordem inversa (Floor 13 → Floor 1)
+        for (int floor = 13; floor >= 1; floor--)
         {
             GameObject btnObj = floorButtonPrefab != null
                 ? Instantiate(floorButtonPrefab, floorButtonContainer)
@@ -412,16 +476,21 @@ public class TowerProgressionHandler : MonoBehaviour
 
             Button btn = btnObj.GetComponent<Button>();
             Text btnText = btnObj.GetComponentInChildren<Text>();
+            Image btnImage = btnObj.GetComponent<Image>();
 
             bool isUnlocked = unlockedFloors.Contains(floor) || floor == 1;
-            int victories = floorVictories.ContainsKey(floor) ? floorVictories[floor] : 0;
 
             if (isUnlocked)
             {
                 if (btnText != null)
                 {
                     btnText.text = $"Floor {floor}";
-                    if (victories > 0) btnText.text += $" ✓ ({victories})";
+                    btnText.color = Color.white; // Cor normal para desbloqueados
+                }
+
+                if (btnImage != null)
+                {
+                    btnImage.color = Color.white; // Cor normal para desbloqueados
                 }
 
                 btn.interactable = true;
@@ -431,10 +500,30 @@ public class TowerProgressionHandler : MonoBehaviour
             else
             {
                 if (btnText != null)
-                    btnText.text = $"Floor {floor} 🔒";
+                {
+                    btnText.text = $"Floor {floor}";
+                    btnText.color = Color.gray; // Cinza para bloqueados
+                }
+
+                if (btnImage != null)
+                    btnImage.color = Color.gray; // Cinza para bloqueados
+
                 btn.interactable = false;
             }
         }
+
+        Debug.Log($"[TowerProgression] Created {13} floor buttons (reverse order). Unlocked: {unlockedFloors.Count}");
+    }
+
+    private int GetHighestUnlockedFloor()
+    {
+        int highest = 1;
+        foreach (int floor in unlockedFloors)
+        {
+            if (floor > highest)
+                highest = floor;
+        }
+        return highest;
     }
 
     private GameObject CreateFloorButton()
@@ -465,8 +554,14 @@ public class TowerProgressionHandler : MonoBehaviour
         if (floorSelectPanel) floorSelectPanel.SetActive(false);
         currentFloor = floor;
 
+        // Notifica o TowerManager sobre a seleção
         if (towerManager != null)
+        {
+            towerManager.SetCurrentFloor(floor);
             towerManager.StartSpecificFloor(floor);
+        }
+
+        Debug.Log($"[TowerProgression] Selected floor {floor} for battle");
     }
 
     // === MÉTODO ATUALIZADO: Usar corrotina para reinicializar batalha ===
