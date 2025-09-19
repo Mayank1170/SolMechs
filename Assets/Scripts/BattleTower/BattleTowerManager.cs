@@ -256,9 +256,25 @@ public class BattleTowerManager : MonoBehaviour
         }
         else
         {
-            // Battle Tower shows floor selection or continues from last unlocked
+            // Battle Tower loads progress and sets to appropriate floor
             LoadProgress();
-            Debug.Log($"Starting Battle Tower mode - Highest unlocked floor: {GetHighestUnlockedFloor()}");
+            int highestUnlocked = GetHighestUnlockedFloor();
+
+            // Define currentFloor baseado no progresso
+            if (highestUnlocked == 1 && !floorsCompleted.ContainsKey(1))
+            {
+                currentFloor = 1; // Primeiro jogo
+            }
+            else if (highestUnlocked < 13)
+            {
+                currentFloor = highestUnlocked + 1; // Próximo andar a desbloquear
+            }
+            else
+            {
+                currentFloor = 13; // Torre completa, deixa no último andar
+            }
+
+            Debug.Log($"Starting Battle Tower mode - Current floor set to: {currentFloor}, Highest unlocked: {highestUnlocked}");
         }
 
         ShowTowerMenu();
@@ -277,9 +293,8 @@ public class BattleTowerManager : MonoBehaviour
         else
         {
             // Battle Tower - immediately open floor selection so the player chooses next fight
-            // (keeps the list visible instead of forcing only "continue")
             if (progressionHandler != null)
-                progressionHandler.ShowFloorSelection(); // <-- ADDED
+                progressionHandler.ShowFloorSelection();
         }
 
         UpdateTowerUI();
@@ -310,22 +325,32 @@ public class BattleTowerManager : MonoBehaviour
             else
             {
                 int unlocked = GetHighestUnlockedFloor();
-                floorDisplayText.text = $"Battle Tower - Floor {currentFloor} (Unlocked: {unlocked}/13)";
+                floorDisplayText.text = $"Battle Tower - Highest: {unlocked}/13";
             }
         }
 
         if (progressText)
         {
             string modeText = isOneClimbMode ? "One Climb Run" : "Battle Tower";
-            string enemyName = GetCurrentFloorName();
 
             if (isOneClimbMode)
             {
+                string enemyName = GetCurrentFloorName();
                 progressText.text = $"{modeText}\nNext Enemy: {enemyName}\nHP will be fully restored after each victory";
             }
             else
             {
-                progressText.text = $"{modeText}\nSelected: {enemyName}";
+                int unlocked = GetHighestUnlockedFloor();
+                int total = 13;
+
+                if (unlocked >= 13)
+                {
+                    progressText.text = $"{modeText}\nTower Complete! All floors unlocked.\nChoose any floor to replay.";
+                }
+                else
+                {
+                    progressText.text = $"{modeText}\nFloors Unlocked: {unlocked}/{total}\nNext Challenge: Floor {unlocked + 1}";
+                }
             }
         }
 
@@ -346,13 +371,13 @@ public class BattleTowerManager : MonoBehaviour
                 }
                 else
                 {
-                    // Safer unlocked check: only true if key exists AND value is true (or floor 1)
-                    bool isUnlocked = currentFloor == 1
-                        || (floorsCompleted.TryGetValue(currentFloor, out bool unlocked) && unlocked); // <-- CHANGED (safe check)
+                    // Verificação mais segura de desbloqueio
+                    bool isUnlocked = currentFloor == 1 ||
+                        (floorsCompleted.TryGetValue(currentFloor - 1, out bool prevCompleted) && prevCompleted);
 
                     if (isUnlocked)
                     {
-                        startFloorButton.GetComponentInChildren<Text>().text = $"Fight: {enemyName}";
+                        startFloorButton.GetComponentInChildren<Text>().text = $"Fight Floor {currentFloor}: {enemyName}";
                         startFloorButton.interactable = true;
                     }
                     else
@@ -387,6 +412,12 @@ public class BattleTowerManager : MonoBehaviour
         currentFloor = floor;
         // Simply start the next floor - HP will be full automatically
         StartCurrentFloor();
+    }
+
+    public void SetCurrentFloor(int floor)
+    {
+        currentFloor = floor;
+        UpdateTowerUI();
     }
 
     public void ReturnToTowerMenu()
