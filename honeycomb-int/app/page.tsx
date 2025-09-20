@@ -10,6 +10,7 @@ import { autoAirdropSol } from "../utils/airdrop";
 import Image from "next/image";
 import UnityGame from "../components/UnityGame";
 import WalletConnection from "../components/WalletConnection";
+// import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
 // Game flow states
 type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_PROFILE' | 'PLAYING';
@@ -513,6 +514,7 @@ export default function Home() {
             </div>
           )}
 </div>
+      {/* <PWAInstallPrompt /> */}
     </main>
   );
 }
