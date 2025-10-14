@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a42d01dfbfdc43e4ba31c7f581dacf7e, type: 3}
+  m_Name: D05
+  m_EditorClassIdentifier: 
+  droneCode: D05
+  droneName: Solus Drone
+  statModifiers:
+    HP: 100
+    ATK: 15
+    DEF: 15
+    ENG: 15
+    SPD: 15
+    SYS: 15
+    PROC: 0
+  moves:
+  - moveName: D
+    baseDamage: 10
+    damageType: Special
+    targetType: 0
+    effect: -1 SPD
+  rawData: 
+  editorSprite: {fileID: 0}
+  droneType: 4
+  balanceMultiplier: 1

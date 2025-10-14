@@ -25,6 +25,9 @@ public class BattleManager : MonoBehaviour
     // Guard to avoid double endings or late invokes
     private bool battleOver = false;
 
+    // === NEW: Allow external scripts (like FanSwarmRules) to override victory conditions ===
+    [HideInInspector] public bool skipDefaultVictoryCheck = false;
+
     // === TIMER ===
     [SerializeField] private BattleTurnTimer turnTimer;  // assign in Inspector
 
@@ -227,7 +230,10 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        if (targetSlot == ModuleSlot.Matrix && !enemyUnit.CanAttackMatrix())
+        // === MODIFIED: Skip Matrix lock check for DroneSwarmUnit ===
+        bool isDroneSwarm = enemyUnit is DroneSwarmUnit;
+
+        if (!isDroneSwarm && targetSlot == ModuleSlot.Matrix && !enemyUnit.CanAttackMatrix())
         {
             uiManager.LogMessage("Matrix locked!");
             yield break;
@@ -251,7 +257,9 @@ public class BattleManager : MonoBehaviour
         ApplyDamage(enemyUnit, targetSlot, damage);
         int newHP = GetCurrentHP(enemyUnit, targetSlot);
 
-        uiManager.LogMessage($"{playerUnit.Name} used {selectedAttack?.attackName ?? "Attack"} on {enemyUnit.Name}'s {targetSlot}.");
+        // === MODIFIED: Custom message for drones ===
+        string targetName = isDroneSwarm ? GetDroneNameForSlot(targetSlot) : $"{enemyUnit.Name}'s {targetSlot}";
+        uiManager.LogMessage($"{playerUnit.Name} used {selectedAttack?.attackName ?? "Attack"} on {targetName}.");
         if (damage > 0) uiManager.LogMessage($"It dealt {damage} damage ({damagePercent:F1}%).");
 
         ApplyEffect(playerUnit, enemyUnit, targetSlot, selectedAttack);
@@ -260,32 +268,65 @@ public class BattleManager : MonoBehaviour
         // 4) If destroyed, play explosion AFTER attack FX finished
         if (newHP == 0 && prevHP > 0)
         {
-            uiManager.LogMessage($"{enemyUnit.Name}'s {targetSlot} is no longer combat-ready!");
+            string destroyedName = isDroneSwarm ? GetDroneNameForSlot(targetSlot) : $"{enemyUnit.Name}'s {targetSlot}";
+            uiManager.LogMessage($"{destroyedName} is no longer combat-ready!");
             ResetBuffStages(enemyUnit, targetSlot);
             yield return WaitFx(0.05f); // micro-gap
             HandlePartDestroyed(enemyUnit, /*isPlayer*/ false, targetSlot);
             yield return WaitFx(fxDestroyDelay); // readability
         }
 
-        // Win conditions
-        if (enemyUnit.matrixHP <= 0)
+        // === MODIFIED: Win conditions (with skipDefaultVictoryCheck support) ===
+        if (!skipDefaultVictoryCheck)
         {
-            uiManager.LogMessage($"{enemyUnit.Name}'s Matrix was destroyed!\n{playerUnit.Name} wins!");
-            currentState = BattleState.Victory;
-            EndBattle(true);
-            yield break;
-        }
+            if (enemyUnit.matrixHP <= 0)
+            {
+                uiManager.LogMessage($"{enemyUnit.Name}'s Matrix was destroyed!\n{playerUnit.Name} wins!");
+                currentState = BattleState.Victory;
+                EndBattle(true);
+                yield break;
+            }
 
-        if (AllNonMatrixPartsBroken(enemyUnit) || !HasAnyUsableModule(enemyUnit))
-        {
-            uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
-            currentState = BattleState.Victory;
-            EndBattle(true);
-            yield break;
+            if (AllNonMatrixPartsBroken(enemyUnit) || !HasAnyUsableModule(enemyUnit))
+            {
+                uiManager.LogMessage($"{enemyUnit.Name} can no longer fight!\n{playerUnit.Name} wins!");
+                currentState = BattleState.Victory;
+                EndBattle(true);
+                yield break;
+            }
         }
 
         currentState = BattleState.EnemyTurn;
         TriggerEnemyTurn();
+    }
+
+    // === NEW: Helper to get drone name from slot ===
+    private string GetDroneNameForSlot(ModuleSlot slot)
+    {
+        // Try to find DroneSwarmLoader to get actual drone names
+        var droneLoader = GameObject.Find("EnemyMech")?.GetComponent<DroneSwarmLoader>();
+        if (droneLoader != null)
+        {
+            Drone drone = null;
+            switch (slot)
+            {
+                case ModuleSlot.RightArm: drone = droneLoader.ResolvedSlot0; break;
+                case ModuleSlot.LeftArm: drone = droneLoader.ResolvedSlot1; break;
+                case ModuleSlot.LowerBody: drone = droneLoader.ResolvedSlot2; break;
+                case ModuleSlot.Matrix: drone = droneLoader.ResolvedSlot3; break;
+            }
+            if (drone != null) return drone.droneName;
+        }
+
+        // Fallback to generic names
+        switch (slot)
+        {
+            case ModuleSlot.RightArm: return "Drone 1";
+            case ModuleSlot.LeftArm: return "Drone 2";
+            case ModuleSlot.LowerBody: return "Drone 3";
+            case ModuleSlot.Matrix: return "Drone 4";
+            default: return "Drone";
+        }
     }
 
     // ================== Enemy flow (stop enemy clock before FX) ==================
@@ -401,20 +442,24 @@ public class BattleManager : MonoBehaviour
                 yield return WaitFx(fxDestroyDelay);
             }
 
-            if (playerUnit.matrixHP <= 0)
+            // === MODIFIED: Defeat conditions (with skipDefaultVictoryCheck support) ===
+            if (!skipDefaultVictoryCheck)
             {
-                uiManager.LogMessage($"{playerUnit.Name}'s Matrix was destroyed!\n{enemyUnit.Name} wins!");
-                currentState = BattleState.Defeat;
-                EndBattle(false);
-                yield break;
-            }
+                if (playerUnit.matrixHP <= 0)
+                {
+                    uiManager.LogMessage($"{playerUnit.Name}'s Matrix was destroyed!\n{enemyUnit.Name} wins!");
+                    currentState = BattleState.Defeat;
+                    EndBattle(false);
+                    yield break;
+                }
 
-            if (AllNonMatrixPartsBroken(playerUnit) || !HasAnyUsableModule(playerUnit))
-            {
-                uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
-                currentState = BattleState.Defeat;
-                EndBattle(false);
-                yield break;
+                if (AllNonMatrixPartsBroken(playerUnit) || !HasAnyUsableModule(playerUnit))
+                {
+                    uiManager.LogMessage($"{playerUnit.Name} can no longer fight!\n{enemyUnit.Name} wins!");
+                    currentState = BattleState.Defeat;
+                    EndBattle(false);
+                    yield break;
+                }
             }
         }
 

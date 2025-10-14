@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5264da03841aa524eabe8f7ad77e14dc, type: 3}
+  m_Name: FanSwarmConfig
+  m_EditorClassIdentifier: 
+  recruitmentTimeSeconds: 30
+  maxFansPerSwarm: 4
+  allowDuplicateDroneTypes: 1
+  delayBetweenDroneAttacks: 1
+  showIndividualDamageNumbers: 1
+  showTargetingIndicators: 1
+  droneGlobalDamageScale: 1
+  droneGlobalHPScale: 1
+  streamerMechBonusPerLivingFan: 0.03
+  dronesAutoRetargetMatrix: 1
+  preferLowestHPTargets: 1
+  allowMatrixFocusFire: 1
+  titanAliases:
+  - titan
+  - tank
+  strikerAliases:
+  - striker
+  - attack
+  - dps
+  arclightAliases:
+  - arclight
+  - energy
+  - arc
+  heartcoreAliases:
+  - heartcore
+  - support
+  - heart
+  solusAliases:
+  - solus
+  - balanced
+  - all
+  underdogAliases:
+  - underdog
+  - special
+  - commemorative
+  - jam
+  maxFanNameLength: 12
+  recruitmentFeedbackDuration: 3
