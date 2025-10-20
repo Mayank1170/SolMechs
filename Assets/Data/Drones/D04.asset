@@ -29,6 +29,10 @@ MonoBehaviour:
     targetType: 0
     effect: -1 SYS
   rawData: 
-  editorSprite: {fileID: 0}
+  idleFrames:
+  - {fileID: 21300000, guid: 6785484674d18d5449b41895da0ed4c7, type: 3}
+  - {fileID: 21300000, guid: a9246b17603945b458ec85ecadae2341, type: 3}
+  - {fileID: 21300000, guid: 98e089b4925aff349ace3a17619e1753, type: 3}
+  animationFPS: 10
   droneType: 3
   balanceMultiplier: 1

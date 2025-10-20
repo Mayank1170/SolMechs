@@ -29,6 +29,10 @@ MonoBehaviour:
     targetType: 0
     effect: -1 ATK
   rawData: 
-  editorSprite: {fileID: 0}
+  idleFrames:
+  - {fileID: 21300000, guid: cb407b6200db6064ab1d0860c1e2008f, type: 3}
+  - {fileID: 21300000, guid: 1e13d5a62e41812428a293467f48ecbe, type: 3}
+  - {fileID: 21300000, guid: 8129c5a94bf069c46be5fa011658175d, type: 3}
+  animationFPS: 10
   droneType: 1
   balanceMultiplier: 1

@@ -29,6 +29,10 @@ MonoBehaviour:
     targetType: 2
     effect: -1 DEF
   rawData: 
-  editorSprite: {fileID: 0}
+  idleFrames:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  animationFPS: 10
   droneType: 5
   balanceMultiplier: 1

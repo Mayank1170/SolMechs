@@ -15,8 +15,12 @@ namespace MechBattle
         public string rawData;
 
         [Header("UI / Paper Doll")]
-        [Tooltip("Sprite for this drone (used by UI systems).")]
-        public Sprite editorSprite;
+        [Tooltip("Animation frames (3 sprites for propeller rotation)")]
+        public Sprite[] idleFrames = new Sprite[3];
+
+        [Tooltip("Animation speed (frames per second)")]
+        [Range(1f, 30f)]
+        public float animationFPS = 10f;
 
         [Header("Drone Classification")]
         [Tooltip("What mech this drone is derived from")]

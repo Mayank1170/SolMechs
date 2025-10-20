@@ -29,6 +29,10 @@ MonoBehaviour:
     targetType: 0
     effect: -1 SPD
   rawData: 
-  editorSprite: {fileID: 0}
+  idleFrames:
+  - {fileID: 21300000, guid: 8ebb89dcc1fda9d48a3c71c797779868, type: 3}
+  - {fileID: 21300000, guid: 8a30ac73221838b4c8adb005e6b4e732, type: 3}
+  - {fileID: 21300000, guid: 597c91cb5557a374ebeaed25246d01af, type: 3}
+  animationFPS: 10
   droneType: 4
   balanceMultiplier: 1

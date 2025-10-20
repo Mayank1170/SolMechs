@@ -15,12 +15,10 @@ public class FanSwarmGameController : MonoBehaviour
         uiManager = GetComponent<UIManager>();
         battleManager = GetComponent<BattleManager>();
 
-        // Get player unit (normal loader)
         MechUnit player = playerMechObject.GetComponent<MechUnitLoader>()?.GetUnitData();
 
-        // Get enemy drones (DroneSwarmUnit)
         var droneLoader = enemyMechObject.GetComponent<DroneSwarmLoader>();
-        DroneSwarmUnit enemy = droneLoader?.GetUnitData(); // Specific type
+        DroneSwarmUnit enemy = droneLoader?.GetUnitData();
 
         if (player == null || enemy == null)
         {
@@ -30,17 +28,14 @@ public class FanSwarmGameController : MonoBehaviour
 
         Debug.Log($"[FanSwarm] Loaded: {player.Name} vs {enemy.Name} (4 drones, all targetable)");
 
-        // Initialize battle (accepts MechUnit, so DroneSwarmUnit works via polymorphism)
         battleManager.Initialize(player, enemy, uiManager);
         uiManager.InitializeHealthBars(player, enemy, battleManager.playerMaxHPs, battleManager.enemyMaxHPs);
         uiManager.DisableSliderInteractabilityAndHandles();
 
-        // Initialize player paper doll
         var playerLoader = playerMechObject.GetComponent<MechUnitLoader>();
         uiManager.InitializePaperDolls(playerLoader, null);
 
-        // Initialize enemy drone sprites
-        InitializeDroneSprites(droneLoader);
+        InitializeDroneAnimations(droneLoader);
     }
 
     void Start()
@@ -51,32 +46,41 @@ public class FanSwarmGameController : MonoBehaviour
         battleManager.StartTurn();
     }
 
-    private void InitializeDroneSprites(DroneSwarmLoader droneLoader)
+    private void InitializeDroneAnimations(DroneSwarmLoader droneLoader)
     {
         if (droneLoader == null || uiManager == null) return;
 
-        SetDroneSprite(uiManager.enemyRightArmImg, droneLoader.ResolvedSlot0);
-        SetDroneSprite(uiManager.enemyLeftArmImg, droneLoader.ResolvedSlot1);
-        SetDroneSprite(uiManager.enemyLowerImg, droneLoader.ResolvedSlot2);
-        SetDroneSprite(uiManager.enemyMatrixImg, droneLoader.ResolvedSlot3);
+        SetDroneAnimation(uiManager.enemyRightArmImg, droneLoader.ResolvedSlot0);
+        SetDroneAnimation(uiManager.enemyLeftArmImg, droneLoader.ResolvedSlot1);
+        SetDroneAnimation(uiManager.enemyLowerImg, droneLoader.ResolvedSlot2);
+        SetDroneAnimation(uiManager.enemyMatrixImg, droneLoader.ResolvedSlot3);
 
-        Debug.Log("[FanSwarm] Drone sprites initialized");
+        Debug.Log("[FanSwarm] Drone animations initialized");
     }
 
-    private void SetDroneSprite(UnityEngine.UI.Image img, Drone drone)
+    private void SetDroneAnimation(UnityEngine.UI.Image img, Drone drone)
     {
         if (img == null) return;
 
-        if (drone != null && drone.editorSprite != null)
+        if (drone != null && drone.idleFrames != null && drone.idleFrames.Length > 0)
         {
-            img.sprite = drone.editorSprite;
+            UISpriteAnimator animator = img.gameObject.GetComponent<UISpriteAnimator>();
+            if (animator == null)
+            {
+                animator = img.gameObject.AddComponent<UISpriteAnimator>();
+            }
+
+            animator.SetAnimation(drone.idleFrames, drone.animationFPS);
+
             img.enabled = true;
             img.preserveAspect = true;
+
+            Debug.Log($"[FanSwarm] Animation set for drone: {drone.droneName}");
         }
         else
         {
             img.enabled = false;
-            Debug.LogWarning($"[FanSwarm] Drone {drone?.droneName} has no sprite assigned");
+            Debug.LogWarning($"[FanSwarm] Drone {drone?.droneName} has no animation frames assigned");
         }
     }
 }
