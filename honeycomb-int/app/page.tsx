@@ -1,395 +1,289 @@
 'use client'
 
-import React, { useState, useEffect } from "react";
-import { useUser, useWallet, SignInButton, SignOutButton } from "@civic/auth-web3/react";
-import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
-import { client, PROJECT_ADDRESS } from "../constants/client";
-import { autoAirdropSol } from "../utils/airdrop";
+import React, { useState } from "react";
+import { useVorldAuth } from "./providers";
 import Image from "next/image";
-import UnityGame from "../components/UnityGame";
-
-// Game flow states
-type GameState = 'CONNECTING' | 'CHECKING_USER' | 'CREATING_WALLET' | 'CREATING_PROFILE' | 'PLAYING';
+import Link from "next/link";
 
 export default function Home() {
-  const user = useUser();
-  const solanaWallet = useWallet({ type: "solana" });
-  const [isLoading, setIsLoading] = useState(false);
-  const [gameState, setGameState] = useState<GameState>('CONNECTING');
-  const [userExists, setUserExists] = useState(false);
-  const [profileExists, setProfileExists] = useState(false);
-  const [projectAddress, setProjectAddress] = useState(PROJECT_ADDRESS);
-  // Main flow logic when user authentication status changes
-  useEffect(() => {
-    const handleUserFlow = async () => {
-      if (!user?.isAuthenticated) {
-        setGameState('CONNECTING');
-        return;
-      }
+  const { user, isAuthenticated, isLoading, login, verifyOTP, logout } = useVorldAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      // User is authenticated with Civic
-      if (!solanaWallet.address) {
-        // User authenticated but no wallet - check if they need to create one or if they have an existing Honeycomb account
-        await checkIfUserNeedsWallet();
-      } else {
-        // User has wallet - proceed with normal flow
-        await checkUserAndProfile();
-      }
-    };
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setError('');
+    setIsSubmitting(true);
 
-    handleUserFlow();
-  }, [user?.isAuthenticated, solanaWallet.address]);
+    console.log('Login started with email:', email);
 
-  // Check if user needs wallet creation or if they can proceed directly
-  const checkIfUserNeedsWallet = async () => {
-    if (!user?.isAuthenticated) return;
-    
-    setIsLoading(true);
-    setGameState('CHECKING_USER');
-    
     try {
-      // For new users or users without wallets, auto-create wallet
-      if ('createWallet' in user) {
-        // console.log("🆕 New user detected - auto-creating wallet...");
-        await autoCreateWallet();
-      } else {
-        // This shouldn't normally happen, but handle gracefully
-        // console.log("❌ Cannot create wallet for this user");
-        alert("Wallet creation not available. Please try again or contact support.");
-        setGameState('CONNECTING');
-      }
-    } catch (error) {
-      console.error("❌ Error in user flow:", error);
-      setGameState('CONNECTING');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const result = await login(email, password);
+      console.log('Login result:', result);
 
-  // Auto-create wallet for new users
-  const autoCreateWallet = async () => {
-    if (!user || !('createWallet' in user)) return;
-    
-    setIsLoading(true);
-    setGameState('CREATING_WALLET');
-    
-    try {
-      // console.log("🏛️ Creating Civic wallet automatically...");
-      await user.createWallet();
-      // console.log("✅ Civic wallet created successfully");
-      
-      // Wait a moment for wallet to be available, then silently check balance
-      setTimeout(async () => {
-        if (solanaWallet.address) {
-          // Silent background balance maintenance
-          autoAirdropSol(solanaWallet.address);
-          checkUserAndProfile();
-        }
-      }, 1000);
-      
-    } catch (error) {
-      console.error("❌ Error creating Civic wallet:", error);
-      alert("Failed to create wallet automatically. Please try again.");
-      setGameState('CONNECTING');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const checkUserAndProfile = async () => {
-    // Get address from Civic Solana wallet
-    if (!solanaWallet.address) return;
-    
-    setIsLoading(true);
-    setGameState('CHECKING_USER');
-    
-    try {
-      // Silent background balance maintenance for existing wallets
-      autoAirdropSol(solanaWallet.address);
-
-      // Check if user exists
-      const usersResult = await client.findUsers({
-        wallets: [solanaWallet.address]
-      });
-      const honeycombUser = (usersResult as any)?.[0] || null;
-      
-      if (honeycombUser) {
-        setUserExists(true);
-        //  console.log("✅ User exists:", honeycombUser);
-        
-        // Check if user has profile for this project
-        const profilesResult = await client.findProfiles({
-          projects: [projectAddress],
-          addresses: [solanaWallet.address]
-        });
-        const profile = (profilesResult as any)?.[0] || null;
-        
-        if (profile) {
-          setProfileExists(true);
-          setGameState('PLAYING');
-          // console.log("✅ User profile exists - redirecting to game:", profile);
+      if (result.success) {
+        if (result.requiresOTP) {
+          console.log('OTP required');
+          setShowOtp(true);
         } else {
-          setProfileExists(false);
-          setGameState('CREATING_PROFILE');
-          // console.log("❌ No profile found for this project - auto-creating profile...");
-          // Auto-create profile for existing user
-          setTimeout(() => createProfileForExistingUser(), 100);
+          console.log('Login successful, no OTP required');
         }
+        // If login successful without OTP, user will be redirected automatically
       } else {
-        setUserExists(false);
-        setProfileExists(false);
-        setGameState('CREATING_PROFILE');
-        // console.log("❌ No user found - auto-creating user and profile...");
-        // Auto-create user and profile for new user
-        setTimeout(() => createUserWithProfile(), 100);
+        console.error('Login failed:', result.error);
+        setError(result.error || 'Login failed');
       }
-    } catch (error) {
-      console.error("Error checking user/profile:", error);
-      // If there's an error, assume we need to create profile
-      setGameState('CREATING_PROFILE');
+    } catch (err: any) {
+      console.error('Login exception:', err);
+      setError(err.message || 'Login failed');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const createUserWithProfile = async () => {
-    if (!solanaWallet.address) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    // Use default name based on wallet address
-    const defaultName = "Player_" + solanaWallet.address.slice(-4);
+  const handleOtpVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
 
-    setIsLoading(true);
     try {
-      // Create user + profile in one transaction (first time user)
-      // console.log("🆕 Creating new user with profile...");
-      const {
-        createNewUserWithProfileTransaction: txResponse
-      } = await client.createNewUserWithProfileTransaction({
-        project: projectAddress,
-        wallet: solanaWallet.address,
-        payer: solanaWallet.address,
-        profileIdentity: "main",
-        userInfo: {
-          name: defaultName,
-          bio: "SolMechs Player",
-          pfp: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(defaultName),
-        },
-      });
+      const result = await verifyOTP(email, otp);
 
-      // Use Civic wallet for signing
-      const result = await sendClientTransactions(
-        client,
-        solanaWallet.wallet,
-        txResponse
-      );
-      // console.log("📋 Transaction result:", result);
-      
-      // Check if transaction was successful
-      const isSuccess = result && result.length > 0 && 
-        result[0].responses && result[0].responses.length > 0 &&
-        result[0].responses[0].status === "Success";
-        
-      if (!isSuccess) {
-        const errorMsg = result[0]?.responses[0]?.error || "Unknown error";
-        throw new Error(errorMsg);
+      if (result.success) {
+        setShowOtp(false);
+        setOtp('');
+        // User will be redirected automatically
+      } else {
+        setError(result.error || 'OTP verification failed');
       }
-      
-      // console.log("✅ New user and profile created successfully!");
-      
-      // Only update states if transaction was successful
-      setUserExists(true);
-      setProfileExists(true);
-      setGameState('PLAYING');
-      
-      // console.log("🎉 Profile creation successful! Redirecting to game...");
-      
-    } catch (error) {
-      console.error("❌ Error creating user with profile:", error);
-      handleProfileCreationError(error as Error);
+    } catch (err: any) {
+      setError(err.message || 'OTP verification failed');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const createProfileForExistingUser = async () => {
-    if (!solanaWallet.address) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // User exists, just create profile for this project
-      // console.log("👤 Creating profile for existing user...");
-      const {
-        createNewProfileTransaction: txResponse
-      } = await client.createNewProfileTransaction({
-        project: projectAddress,
-        payer: solanaWallet.address,
-        identity: "main",
-      });
-
-      // Use Civic wallet for signing
-      const result = await sendClientTransactions(
-        client,
-        solanaWallet.wallet,
-        txResponse
-      );
-      // console.log("📋 Transaction result:", result);
-      
-      // Check if transaction was successful
-      const isSuccess = result && result.length > 0 && 
-        result[0].responses && result[0].responses.length > 0 &&
-        result[0].responses[0].status === "Success";
-        
-      if (!isSuccess) {
-        const errorMsg = result[0]?.responses[0]?.error || "Unknown error";
-        throw new Error(errorMsg);
-      }
-      
-      // console.log("✅ Profile created for existing user successfully!");
-      
-      // Only update states if transaction was successful
-      setUserExists(true);
-      setProfileExists(true);
-      setGameState('PLAYING');
-      
-      // console.log("🎉 Profile creation successful! Redirecting to game...");
-      
-    } catch (error) {
-      // console.error("❌ Error creating profile for existing user:", error);
-      handleProfileCreationError(error as Error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleLogout = async () => {
+    await logout();
+    setEmail('');
+    setPassword('');
+    setOtp('');
+    setShowOtp(false);
+    setError('');
   };
 
-  const handleProfileCreationError = (error: Error) => {
-    const errorMessage = error.message;
-    
-    // Check if error is about user already having profile
-    if (errorMessage.includes("User already exists with profile")) {
-      // console.log("🔄 User already has profile - redirecting to game...");
-      // Profile already exists, just go to play state
-      setUserExists(true);
-      setProfileExists(true);
-      setGameState('PLAYING');
-    } else if (errorMessage.includes("Attempt to debit an account but found no record of a prior credit")) {
-      // Insufficient balance error
-      alert("❌ Transaction Failed: Insufficient SOL balance\n\nYou need SOL in your wallet to create a profile. Please add some SOL and try again.");
-      setGameState('CONNECTING');
-    } else if (errorMessage.includes("Transaction simulation failed")) {
-      // General simulation failure
-      alert("❌ Transaction Failed\n\nThe transaction could not be completed. This might be due to:\n• Insufficient SOL balance\n• Network issues\n• Wallet configuration\n\nPlease check your wallet and try again.");
-      setGameState('CONNECTING');
-    } else {
-      // Other errors
-      alert("❌ Error creating profile:\n\n" + errorMessage);
-      setGameState('CONNECTING');
-    }
-  };
-
-  const handleBackToMenu = () => {
-    setGameState('CONNECTING');
-    // Reset states when going back
-    setUserExists(false);
-    setProfileExists(false);
-  };
-
-  // Main render logic
-  if (gameState === 'PLAYING') {
+  // Show loading state
+  if (isLoading && !user && !email) {
     return (
-      <UnityGame 
-        onBackToMenu={handleBackToMenu}
-        walletAddress={solanaWallet.address || ''}
-      />
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <div className="animate-spin text-4xl mb-4">⚙️</div>
+        <p className="text-white">Loading...</p>
+      </main>
     );
   }
 
+  // If authenticated, show main menu
+  if (isAuthenticated && user) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <div className="w-full max-w-4xl">
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8">
+            <Image src="/images/logo.svg" alt="SolMechs Logo" width={200} height={200} className="w-48 h-48" />
+            <h1 className="text-4xl font-bold text-white mt-4 font-mek">SOLMECHS</h1>
+          </div>
+
+          {/* User Info Card */}
+          <div className="mb-6 p-6 bg-gray-800/80 rounded-lg border border-cyan-500/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-cyan-400 mb-2">Welcome, {user.username}!</h2>
+                <p className="text-gray-300">Email: {user.email}</p>
+                <p className="text-gray-300">Connected Accounts: {user.totalConnectedAccounts}</p>
+                <div className="flex gap-2 mt-2">
+                  {user.authMethods.map((method) => (
+                    <span
+                      key={method}
+                      className="px-3 py-1 bg-cyan-600/20 border border-cyan-500/50 text-cyan-300 rounded-full text-sm"
+                    >
+                      {method.toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                SIGN OUT
+              </button>
+            </div>
+          </div>
+
+          {/* Main Menu */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Play Game Card */}
+            <Link href="/unity">
+              <div className="p-8 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 rounded-lg border-2 border-cyan-500/50 hover:border-cyan-400 transition-all hover:scale-105 cursor-pointer">
+                <div className="text-5xl mb-4">🎮</div>
+                <h3 className="text-2xl font-bold text-cyan-300 mb-2 font-mek">PLAY GAME</h3>
+                <p className="text-gray-300">Jump into the mech battle arena</p>
+              </div>
+            </Link>
+
+            {/* Arena Arcade Card */}
+            <Link href="/arena">
+              <div className="p-8 bg-gradient-to-br from-purple-900/40 to-pink-900/40 rounded-lg border-2 border-purple-500/50 hover:border-purple-400 transition-all hover:scale-105 cursor-pointer">
+                <div className="text-5xl mb-4">🎪</div>
+                <h3 className="text-2xl font-bold text-purple-300 mb-2 font-mek">ARENA ARCADE</h3>
+                <p className="text-gray-300">Stream integration & viewer boosts</p>
+              </div>
+            </Link>
+
+            {/* Profile Card */}
+            <Link href="/profile">
+              <div className="p-8 bg-gradient-to-br from-green-900/40 to-emerald-900/40 rounded-lg border-2 border-green-500/50 hover:border-green-400 transition-all hover:scale-105 cursor-pointer">
+                <div className="text-5xl mb-4">👤</div>
+                <h3 className="text-2xl font-bold text-green-300 mb-2 font-mek">PROFILE</h3>
+                <p className="text-gray-300">View your stats and settings</p>
+              </div>
+            </Link>
+
+            {/* About Card */}
+            <div className="p-8 bg-gradient-to-br from-gray-800/40 to-gray-900/40 rounded-lg border-2 border-gray-500/50">
+              <div className="text-5xl mb-4">ℹ️</div>
+              <h3 className="text-2xl font-bold text-gray-300 mb-2 font-mek">ABOUT</h3>
+              <p className="text-gray-400">Solana blockchain-powered mech battles</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Login Form
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <Image src="/images/logo.svg" alt="SolMechs Logo" width={100} height={100} className="w-full h-full" /> 
-        </div>
+          <Image src="/images/logo.svg" alt="SolMechs Logo" width={150} height={150} className="w-36 h-36" />
+          <h1 className="text-3xl font-bold text-white mt-4 font-mek">SOLMECHS</h1>
         </div>
 
-        {/* Wallet Connection Status */}
-        <div className="mb-6 p-8 h-[80%] flex flex-col items-center justify-center lg:w-[50vw] md:w-[80vw] w-[300px] bg-contain bg-center bg-no-repeat" style={{backgroundImage: "url('/images/frame.png')", minHeight: '550px'}}>
-          {!user?.isAuthenticated ? (
-            <div className="text-center flex flex-col items-center">
-              <div className="text-4xl mb-4">
-                <Image src="/images/connect_logo.png" alt="Link" width={100} height={100} className="w-[40px] h-[40px]" /> 
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-2">Welcome to SolMechs</h2>
-              <p className="text-gray-300 mb-4">Sign in to start playing</p>
-              <div className="flex justify-center relative">
-                {/* Custom button overlay */}
-                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
-                  <Image 
-                    src="/images/Button1.png" 
-                    alt="Sign In" 
-                    width={200} 
-                    height={60} 
-                    className="w-auto h-auto"
-                  />
-                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none font-mek">
-                    SIGN IN 
-                  </span>
-                </div>
-                {/* Hidden actual SignInButton positioned behind */}
-                <SignInButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
-              </div>
-            </div>
-          ) : solanaWallet.address && gameState !== 'CREATING_PROFILE' ? (
-            <div className="text-center">
-              <div className="text-4xl mb-4">✅</div>
-              <h2 className="text-xl font-bold text-green-400 mb-2">Ready to Play</h2>
-              <p className="text-gray-300 mb-4">Your wallet is connected and ready</p>
+        {/* Login Box */}
+        <div className="p-8 bg-gray-800/90 rounded-lg border-2 border-cyan-500/30 backdrop-blur-sm">
+          {!showOtp ? (
+            <>
+              <h2 className="text-2xl font-bold text-cyan-400 mb-6 text-center">SIGN IN</h2>
 
-              <div className="mt-3 flex gap-2 justify-center relative">
-                {/* Custom button overlay */}
-                <div className="relative hover:scale-105 transition-transform duration-200 z-10">
-                  <Image 
-                    src="/images/Button1.png" 
-                    alt="Sign Out" 
-                    width={160} 
-                    height={50} 
-                    className="w-auto h-auto"
-                  />
-                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl pointer-events-none">
-                    SIGN OUT
-                  </span>
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm">
+                  {error}
                 </div>
-                {/* Hidden actual SignOutButton positioned behind */}
-                <SignOutButton className="absolute inset-0 opacity-0 z-20 cursor-pointer" />
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 mb-2 text-sm">EMAIL</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full p-3 bg-gray-900 border border-cyan-500/30 text-white rounded focus:border-cyan-400 focus:outline-none"
+                    placeholder="your@email.com"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-2 text-sm">PASSWORD</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-3 bg-gray-900 border border-cyan-500/30 text-white rounded focus:border-cyan-400 focus:outline-none"
+                    placeholder="••••••••"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold rounded transition-colors disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
+                </button>
+              </form>
+
+              <div className="mt-6 text-center text-gray-400 text-sm">
+                <p>Don't have an account?</p>
+                <a href="https://access.thevorld.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300">
+                  Create account on Vorld →
+                </a>
               </div>
-            </div>
-          ) : gameState === 'CREATING_PROFILE' ? (
-            <div className="text-center">
-              <div className="animate-spin text-4xl mb-4">⚙️</div>
-              <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Profile...</h2>
-              <p className="text-gray-300 mb-4">
-                {userExists 
-                  ? 'Creating your game profile' 
-                  : 'Creating your account and profile'}
-              </p>
-              <p className="text-sm text-gray-400">
-                Please confirm the transaction in your wallet
-              </p>
-            </div>
+            </>
           ) : (
-            <div className="text-center">
-              <div className="animate-spin text-4xl mb-4">⚙️</div>
-              <h2 className="text-xl font-bold text-white mb-2">Setting Up Your Account</h2>
-              <p className="text-gray-300">Please wait while we prepare your resources...</p>
-            </div>
+            <>
+              <h2 className="text-2xl font-bold text-cyan-400 mb-6 text-center">VERIFY OTP</h2>
+
+              <p className="text-gray-300 mb-4 text-center text-sm">
+                Enter the 6-digit code sent to<br />
+                <span className="text-cyan-400">{email}</span>
+              </p>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleOtpVerification} className="space-y-4">
+                <div>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full p-4 bg-gray-900 border border-cyan-500/30 text-white rounded text-center text-2xl tracking-widest focus:border-cyan-400 focus:outline-none"
+                    placeholder="000000"
+                    maxLength={6}
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || otp.length !== 6}
+                  className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold rounded transition-colors disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'VERIFYING...' : 'VERIFY OTP'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtp(false);
+                    setOtp('');
+                    setError('');
+                  }}
+                  className="w-full py-2 text-gray-400 hover:text-white transition-colors text-sm"
+                >
+                  ← Back to login
+                </button>
+              </form>
+            </>
           )}
-</div>
+        </div>
+      </div>
     </main>
   );
 }
