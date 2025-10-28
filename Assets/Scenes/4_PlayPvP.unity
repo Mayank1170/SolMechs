@@ -363,7 +363,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: CreateRoomNow
         m_Mode: 1
@@ -774,86 +774,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 174474447}
   m_CullTransparentMesh: 1
---- !u!1 &193762674
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 193762675}
-  - component: {fileID: 193762677}
-  - component: {fileID: 193762676}
-  m_Layer: 5
-  m_Name: Text (Legacy)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &193762675
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 193762674}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1756719558}
-  m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -16.9468, y: 5.0087}
-  m_SizeDelta: {x: 332.1064, y: 191.9825}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &193762676
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 193762674}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 14
-    m_FontStyle: 0
-    m_BestFit: 0
-    m_MinSize: 10
-    m_MaxSize: 40
-    m_Alignment: 0
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
-    m_LineSpacing: 1
-  m_Text: New Text
---- !u!222 &193762677
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 193762674}
-  m_CullTransparentMesh: 1
 --- !u!1 &275045640
 GameObject:
   m_ObjectHideFlags: 0
@@ -1084,7 +1004,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: StartGame
         m_Mode: 1
@@ -1217,7 +1137,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: OnPlayClicked
         m_Mode: 1
@@ -1300,7 +1220,7 @@ RectTransform:
   - {fileID: 31555373}
   - {fileID: 300770433}
   m_Father: {fileID: 1938631814}
-  m_RootOrder: 9
+  m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -1575,7 +1495,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: OnJoinRoomClicked
         m_Mode: 1
@@ -1868,7 +1788,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: JoinRoomNow
         m_Mode: 1
@@ -2001,7 +1921,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: OnVsFriendClicked
         m_Mode: 1
@@ -2678,7 +2598,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: OnCreateRoomClicked
         m_Mode: 1
@@ -3059,83 +2979,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1737715360}
   m_CullTransparentMesh: 1
---- !u!1 &1756719557
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1756719558}
-  - component: {fileID: 1756719560}
-  - component: {fileID: 1756719559}
-  m_Layer: 5
-  m_Name: RoomList
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &1756719558
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1756719557}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 193762675}
-  m_Father: {fileID: 1938631814}
-  m_RootOrder: 8
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1756719559
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1756719557}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &1756719560
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1756719557}
-  m_CullTransparentMesh: 1
 --- !u!1 &1760441401
 GameObject:
   m_ObjectHideFlags: 0
@@ -3331,8 +3174,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 2.0269, y: -3.0402}
-  m_SizeDelta: {x: 914.7985, y: 535.7753}
+  m_AnchoredPosition: {x: -2.27, y: -5.9049}
+  m_SizeDelta: {x: 1616.6296, y: 948.2803}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1827818688
 MonoBehaviour:
@@ -3452,7 +3295,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1938631815}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PhotonMenuManager, Assembly-CSharp
         m_MethodName: OnVsFriendClicked
         m_Mode: 1
@@ -3603,7 +3446,6 @@ RectTransform:
   - {fileID: 89584137}
   - {fileID: 1039290165}
   - {fileID: 1278587975}
-  - {fileID: 1756719558}
   - {fileID: 394517650}
   m_Father: {fileID: 0}
   m_RootOrder: 2
@@ -3622,21 +3464,36 @@ MonoBehaviour:
   m_GameObject: {fileID: 1938631810}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 486a8d55ee9d9cb4b87fa981ab7c1b28, type: 3}
+  m_Script: {fileID: 11500000, guid: 25a3469cca3ab7d46aa381236c5a3e66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameVersion: 1.0
+  maxPlayersPerRoom: 2
+  preferredRegion: in
+  pvpBattleSceneName: PvP Game Play
+  pveBattleSceneName: 3_PilotMechBattleV1
   connectingPanel: {fileID: 38326980}
   menuPanel: {fileID: 1737715360}
   playPanel: {fileID: 1187056711}
   vsFriendPanel: {fileID: 89584136}
-  joinRoomPanel: {fileID: 1278587974}
   createRoomPanel: {fileID: 1039290164}
+  joinRoomPanel: {fileID: 1278587974}
   startGamePanel: {fileID: 394517649}
+  statusText: {fileID: 1438221666}
   usernameInput: {fileID: 1502039853}
-  joinRoomInput: {fileID: 747742735}
-  createRoomInput: {fileID: 275045642}
+  playButton: {fileID: 381624948}
+  vsFriendButton: {fileID: 1879178526}
+  createRoomButton: {fileID: 1564932016}
+  joinRoomButton: {fileID: 847544055}
+  createRoomNameInput: {fileID: 275045642}
+  joinRoomNameInput: {fileID: 747742735}
+  createRoomConfirmButton: {fileID: 85974348}
+  joinRoomConfirmButton: {fileID: 1004530844}
   playerListText: {fileID: 31555374}
   startGameButton: {fileID: 300770434}
+  loadingPanel: {fileID: 0}
+  matrixCatalog: {fileID: 11400000, guid: 1735f74b95f61514f8439782182f48d5, type: 2}
+  partCatalog: {fileID: 11400000, guid: cab87833ad848e24089aa10a7329c16a, type: 2}
 --- !u!1 &2020284055
 GameObject:
   m_ObjectHideFlags: 0

@@ -17,7 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/0_TitleConnect.unity
     guid: d956aa15860c71b4d8175614ba782be6
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/4_PlayPvP.unity
     guid: 12f313ae7b26c0a4694d558d87a19f45
   - enabled: 0
@@ -41,6 +41,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/7_BattleTower.unity
     guid: e541b62495a878f44a0a470a6c5b6e2d
+  - enabled: 1
+    path: Assets/Scenes/PvP Game Play.unity
+    guid: 0dcc6e07ad65713479e98aa057b44304
   m_configObjects:
     com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 10ba18ef3d07e2e4f8164436fcf7a5c5, type: 2}
     com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000, guid: 93753a01cc8f8a3a39657ae54b0f027c, type: 2}
