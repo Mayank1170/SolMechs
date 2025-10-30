@@ -10,8 +10,8 @@ interface UnityGameProps {
 export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
-  // Copy wallet address to clipboard
   const handleCopyAddress = async (address: string) => {
     try {
       await navigator.clipboard.writeText(address);
@@ -23,54 +23,107 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
   };
 
   useEffect(() => {
-    // Set up Unity WebGL communication bridge
+    const startGameSession = async () => {
+      try {
+        console.log('🎮 Starting game session for wallet:', walletAddress);
+
+        const response = await fetch('/api/game-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setGameSessionId(result.data.sessionId);
+          console.log('✅ Game session started:', result.data.sessionId);
+        } else {
+          console.error('❌ Failed to start game session:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ Error starting game session:', error);
+      }
+    };
+
+    startGameSession();
+  }, [walletAddress]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Expose Web3 functions to Unity iframe
       (window as any).web3Bridge = {
         mintReward: async (amount: number) => {
-          // console.log(`🏆 Unity called: Mint ${amount} reward tokens`);
-          // Show notification in the game
+       
           alert(`🎉 Victory! You earned ${amount} SolMechs tokens!\n\nWallet: ${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}\n\n(Real blockchain minting will be integrated here)`);
-          
-          // TODO: Integrate with your existing Honeycomb mintWinReward function
-          // Example: await mintWinReward(amount);
-          
+
           return true;
         },
-          
+
         getBalance: async () => {
-          // console.log('💰 Unity called: Get user balance');
-          // TODO: Integrate with your existing checkPointBalance function
-          // Example: return await checkPointBalance();
-          
-          // For now, return mock balance
+        
           const mockBalance = Math.floor(Math.random() * 500) + 100;
-          // console.log(`💰 Returning balance: ${mockBalance} tokens`);
           return mockBalance;
         },
-        
+
         getWalletAddress: () => {
-          // console.log('🔗 Unity called: Get wallet address');
           return walletAddress;
         },
-        
+
         onGameWin: async () => {
-          // console.log('🎉 Unity: Player won the game!');
+          console.log('🎉 Unity: Player won the game!');
+
+          if (gameSessionId) {
+            try {
+              const response = await fetch('/api/game-session', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: gameSessionId,
+                  won: true,
+                  score: 1000
+                })
+              });
+
+              const result = await response.json();
+              console.log('📊 Game session ended:', result.data);
+            } catch (error) {
+              console.error('❌ Error ending game session:', error);
+            }
+          }
+
           return await (window as any).web3Bridge.mintReward(10);
         },
-        
-        onGameLose: () => {
-          // console.log('😔 Unity: Player lost the game');
+
+        onGameLose: async () => {
+          console.log('😔 Unity: Player lost the game');
+
+          if (gameSessionId) {
+            try {
+              const response = await fetch('/api/game-session', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: gameSessionId,
+                  won: false,
+                  score: 0
+                })
+              });
+
+              const result = await response.json();
+              console.log('📊 Game session ended:', result.data);
+            } catch (error) {
+              console.error('❌ Error ending game session:', error);
+            }
+          }
+
           return false;
         },
-        
-        // Additional Web3 functions Unity can call
+
         showWalletInfo: () => {
           alert(`🔗 Wallet Info:\n\nAddress: ${walletAddress}\nNetwork: Solana\nStatus: Connected\n\nYou can earn tokens by winning battles!`);
         }
       };
 
-      // console.log('✅ Web3 Bridge initialized for Unity communication');
     }
 
     return () => {
@@ -79,7 +132,7 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
         delete (window as any).web3Bridge;
       }
     };
-  }, [walletAddress]);
+  }, [walletAddress, gameSessionId]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -112,7 +165,6 @@ export default function UnityGame({ onBackToMenu, walletAddress }: UnityGameProp
         </button>
       </div>
 
-      {/* Unity WebGL Game Container */}
       <div className="flex-1 relative">
         <iframe
           ref={iframeRef}

@@ -1,12 +1,9 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
 
-// Honeycomb protocol RPC endpoint
 const HONEYCOMB_RPC_URL = 'https://rpc.test.honeycombprotocol.com'
 
-// Minimum SOL balance threshold (0.1 SOL)
 const MIN_SOL_BALANCE = 0.1 * LAMPORTS_PER_SOL
 
-// Default airdrop amount (1 SOL)
 const DEFAULT_AIRDROP_AMOUNT = 1 * LAMPORTS_PER_SOL
 
 export class SolAirdropService {
@@ -16,9 +13,6 @@ export class SolAirdropService {
     this.connection = new Connection(HONEYCOMB_RPC_URL, 'confirmed')
   }
 
-  /**
-   * Check if wallet needs SOL (balance is below minimum threshold) - silent operation
-   */
   async checkIfNeedsAirdrop(walletAddress: string): Promise<{ needsAirdrop: boolean; currentBalance: number }> {
     try {
       const publicKey = new PublicKey(walletAddress)
@@ -39,22 +33,11 @@ export class SolAirdropService {
     }
   }
 
-  /**
-   * Request SOL airdrop for a wallet address (silent background operation)
-   */
   async requestAirdrop(walletAddress: string, amount: number = DEFAULT_AIRDROP_AMOUNT): Promise<{ success: boolean; signature?: string; error?: string }> {
     try {
-      // Silent logging - no user-facing messages
-      // console.log(`[Background] Requesting ${amount / LAMPORTS_PER_SOL} SOL for wallet balance maintenance`)
-      
       const publicKey = new PublicKey(walletAddress)
-      
-      // Request airdrop from Honeycomb testnet
       const signature = await this.connection.requestAirdrop(publicKey, amount)
       
-      // console.log(`[Background] Airdrop requested, signature: ${signature}`)
-      
-      // Use a shorter timeout for background operations
       const confirmationResult = await this.waitForConfirmationWithTimeout(signature, 30000) // 30 seconds
       
       if (confirmationResult.confirmed) {
@@ -64,15 +47,11 @@ export class SolAirdropService {
           signature
         }
       } else if (confirmationResult.timeout) {
-        // Transaction might still succeed, but we timed out - that's okay for background operation
-        // console.log(`[Background] Airdrop confirmation timed out, transaction may still succeed`)
-        
         return {
-          success: true, // Return success for background operations even on timeout
+          success: true,
           signature
         }
       } else {
-        // console.log('[Background] Airdrop transaction failed, will retry later if needed')
         return {
           success: false,
           error: 'Background airdrop failed'
@@ -80,8 +59,6 @@ export class SolAirdropService {
       }
       
     } catch (error) {
-      // console.log('[Background] Error during balance maintenance:', error instanceof Error ? error.message : 'Unknown error')
-      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Background operation failed'
@@ -89,9 +66,6 @@ export class SolAirdropService {
     }
   }
 
-  /**
-   * Wait for transaction confirmation with custom timeout
-   */
   private async waitForConfirmationWithTimeout(signature: string, timeoutMs: number): Promise<{ 
     confirmed: boolean; 
     timeout: boolean; 
@@ -101,7 +75,6 @@ export class SolAirdropService {
       let timeoutId: NodeJS.Timeout
       let resolved = false
 
-      // Set timeout
       timeoutId = setTimeout(() => {
         if (!resolved) {
           resolved = true
@@ -109,7 +82,6 @@ export class SolAirdropService {
         }
       }, timeoutMs)
 
-      // Try to confirm transaction
       this.connection.confirmTransaction(signature, 'confirmed')
         .then((confirmation) => {
           clearTimeout(timeoutId)
@@ -132,19 +104,13 @@ export class SolAirdropService {
     })
   }
 
-  /**
-   * Auto-airdrop SOL if wallet balance is low (silent background operation)
-   */
   async autoAirdropIfNeeded(walletAddress: string): Promise<{ airdropped: boolean; signature?: string; error?: string }> {
     try {
       const { needsAirdrop, currentBalance } = await this.checkIfNeedsAirdrop(walletAddress)
       
       if (!needsAirdrop) {
-        // console.log(`[Background] Wallet has sufficient balance: ${(currentBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`)
         return { airdropped: false }
       }
-      
-      // console.log(`[Background] Low balance detected (${(currentBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL), performing background maintenance...`)
       
       const result = await this.requestAirdrop(walletAddress)
       
@@ -154,7 +120,6 @@ export class SolAirdropService {
         error: result.error
       }
     } catch (error) {
-      // console.log('[Background] Error in balance maintenance:', error)
       return {
         airdropped: false,
         error: error instanceof Error ? error.message : 'Background maintenance failed'
@@ -162,9 +127,6 @@ export class SolAirdropService {
     }
   }
 
-  /**
-   * Get current wallet balance in SOL
-   */
   async getBalance(walletAddress: string): Promise<number> {
     try {
       const publicKey = new PublicKey(walletAddress)
@@ -176,22 +138,15 @@ export class SolAirdropService {
     }
   }
 
-  /**
-   * Check transaction status manually
-   */
   async checkTransactionStatus(signature: string): Promise<{ confirmed: boolean; error?: string }> {
     try {
-      // console.log(`🔍 Checking transaction status: ${signature}`)
       const status = await this.connection.getSignatureStatus(signature)
       
       if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
-        // console.log(`✅ Transaction confirmed: ${signature}`)
         return { confirmed: true }
       } else if (status?.value?.err) {
-        // console.log(`❌ Transaction failed: ${signature}`, status.value.err)
         return { confirmed: false, error: 'Transaction failed' }
       } else {
-        // console.log(`⏳ Transaction still processing: ${signature}`)
         return { confirmed: false, error: 'Transaction still processing' }
       }
     } catch (error) {
@@ -201,10 +156,8 @@ export class SolAirdropService {
   }
 }
 
-// Export singleton instance
 export const solAirdropService = new SolAirdropService()
 
-// Export utility functions
 export const checkWalletBalance = (walletAddress: string) => 
   solAirdropService.checkIfNeedsAirdrop(walletAddress)
 
@@ -217,7 +170,6 @@ export const autoAirdropSol = (walletAddress: string) =>
 export const checkTransactionStatus = (signature: string) =>
   solAirdropService.checkTransactionStatus(signature)
 
-// Debug helper - expose to window for console debugging
 if (typeof window !== 'undefined') {
   ;(window as any).debugSolAirdrop = {
     checkBalance: checkWalletBalance,

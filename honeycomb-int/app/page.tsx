@@ -40,7 +40,6 @@ export default function Home() {
     handleUserFlow();
   }, [user?.isAuthenticated, solanaWallet.address]);
 
-  // Check if user needs wallet creation or if they can proceed directly
   const checkIfUserNeedsWallet = async () => {
     if (!user?.isAuthenticated) return;
     
@@ -48,12 +47,11 @@ export default function Home() {
     setGameState('CHECKING_USER');
     
     try {
-      // For new users or users without wallets, auto-create wallet
       if ('createWallet' in user) {
         // console.log("🆕 New user detected - auto-creating wallet...");
         await autoCreateWallet();
       } else {
-        // This shouldn't normally happen, but handle gracefully
+      
         // console.log("❌ Cannot create wallet for this user");
         alert("Wallet creation not available. Please try again or contact support.");
         setGameState('CONNECTING');

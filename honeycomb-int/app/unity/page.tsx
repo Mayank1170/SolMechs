@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 
-// Declare Unity global function
 declare global {
   function createUnityInstance(canvas: HTMLCanvasElement, config: any, onProgress?: (progress: number) => void): Promise<any>
 }
@@ -15,7 +14,6 @@ export default function UnityPage() {
   useEffect(() => {
     const loadUnityScript = () => {
       return new Promise<void>((resolve, reject) => {
-        // Check if already loaded
         if (typeof (window as any).createUnityInstance === 'function' || 
             typeof createUnityInstance !== 'undefined') {
           // console.log('✅ createUnityInstance already available')
