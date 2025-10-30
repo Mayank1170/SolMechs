@@ -94,8 +94,7 @@ export default function Home() {
         <div className="w-full max-w-4xl">
           {/* Header */}
           <div className="flex flex-col items-center mb-8">
-            <Image src="/images/logo.svg" alt="SolMechs Logo" width={200} height={200} className="w-48 h-48" />
-            <h1 className="text-4xl font-bold text-white mt-4 font-mek">SOLMECHS</h1>
+            <Image src="/images/logo.svg" alt="SolMechs Logo" width={200} height={200} className="w-64 h-32" />
           </div>
 
           {/* User Info Card */}
@@ -127,12 +126,12 @@ export default function Home() {
 
           {/* Main Menu */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Play Game Card */}
-            <Link href="/unity">
-              <div className="p-8 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 rounded-lg border-2 border-cyan-500/50 hover:border-cyan-400 transition-all hover:scale-105 cursor-pointer">
-                <div className="text-5xl mb-4">🎮</div>
-                <h3 className="text-2xl font-bold text-cyan-300 mb-2 font-mek">PLAY GAME</h3>
-                <p className="text-gray-300">Jump into the mech battle arena</p>
+            {/* Viewer Portal Card */}
+            <Link href="/arena/viewer">
+              <div className="p-8 bg-gradient-to-br from-blue-900/40 to-indigo-900/40 rounded-lg border-2 border-blue-500/50 hover:border-blue-400 transition-all hover:scale-105 cursor-pointer">
+                <div className="text-5xl mb-4">👥</div>
+                <h3 className="text-2xl font-bold text-blue-300 mb-2 font-mek">VIEWER PORTAL</h3>
+                <p className="text-gray-300">Join a streamer&apos;s game and support them</p>
               </div>
             </Link>
 
@@ -172,8 +171,8 @@ export default function Home() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <Image src="/images/logo.svg" alt="SolMechs Logo" width={150} height={150} className="w-36 h-36" />
-          <h1 className="text-3xl font-bold text-white mt-4 font-mek">SOLMECHS</h1>
+          <Image src="/images/logo.svg" alt="SolMechs Logo" width={250} height={250} className="w-64 h-32" />
+          {/* <h1 className="text-3xl font-bold text-white mt-4 font-mek">SOLMECHS</h1> */}
         </div>
 
         {/* Login Box */}
@@ -225,7 +224,7 @@ export default function Home() {
               </form>
 
               <div className="mt-6 text-center text-gray-400 text-sm">
-                <p>Don't have an account?</p>
+                <p>Don&apos;t have an account?</p>
                 <a href="https://access.thevorld.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300">
                   Create account on Vorld →
                 </a>

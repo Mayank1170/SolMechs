@@ -1,8 +1,7 @@
-import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 
-const ARENA_SERVER_URL = process.env.NEXT_PUBLIC_ARENA_SERVER_URL || 'wss://airdrop-arcade.onrender.com';
-const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL || 'https://airdrop-arcade.onrender.com/api';
+const ARENA_SERVER_URL = process.env.NEXT_PUBLIC_ARENA_SERVER_URL ?? 'wss://airdrop-arcade.onrender.com';
+const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? 'https://airdrop-arcade.onrender.com/api';
 const VORLD_APP_ID = process.env.NEXT_PUBLIC_VORLD_APP_ID || '';
 const ARENA_GAME_ID = process.env.NEXT_PUBLIC_ARENA_GAME_ID || '';
 
@@ -87,7 +86,7 @@ export interface ItemDrop {
 }
 
 export class ArenaGameService {
-  private socket: Socket | null = null;
+  private socket: any = null;
   private gameState: GameState | null = null;
   private userToken: string = '';
 
@@ -147,7 +146,7 @@ export class ArenaGameService {
 
       return {
         success: true,
-        data: this.gameState
+        data: this.gameState ?? undefined
       };
     } catch (error: any) {
       console.error('Game initialization error:', error.response?.data);
@@ -216,7 +215,7 @@ export class ArenaGameService {
           resolve(false);
         });
 
-        this.socket?.on('disconnect', (reason) => {
+        this.socket?.on('disconnect', (reason: any) => {
           console.log('WebSocket disconnected:', reason);
         });
       });
@@ -229,56 +228,133 @@ export class ArenaGameService {
   // Set up WebSocket event listeners
   private setupEventListeners(): void {
     // Arena Events
-    this.socket?.on('arena_countdown_started', (data) => {
+    this.socket?.on('arena_countdown_started', (data: any) => {
       this.onArenaCountdownStarted?.(data);
     });
 
-    this.socket?.on('countdown_update', (data) => {
+    this.socket?.on('countdown_update', (data: any) => {
       this.onCountdownUpdate?.(data);
     });
 
-    this.socket?.on('arena_begins', (data) => {
+    this.socket?.on('arena_begins', (data: any) => {
       this.onArenaBegins?.(data);
     });
 
     // Boost Events
-    this.socket?.on('player_boost_activated', (data) => {
+    this.socket?.on('player_boost_activated', (data: any) => {
       this.onPlayerBoostActivated?.(data);
     });
 
-    this.socket?.on('boost_cycle_update', (data) => {
+    this.socket?.on('boost_cycle_update', (data: any) => {
       this.onBoostCycleUpdate?.(data);
     });
 
-    this.socket?.on('boost_cycle_complete', (data) => {
+    this.socket?.on('boost_cycle_complete', (data: any) => {
       this.onBoostCycleComplete?.(data);
     });
 
     // Package Events
-    this.socket?.on('package_drop', (data) => {
+    this.socket?.on('package_drop', (data: any) => {
       this.onPackageDrop?.(data);
     });
 
-    this.socket?.on('immediate_item_drop', (data) => {
+    this.socket?.on('immediate_item_drop', (data: any) => {
       this.onImmediateItemDrop?.(data);
     });
 
     // Game Events
-    this.socket?.on('event_triggered', (data) => {
+    this.socket?.on('event_triggered', (data: any) => {
       this.onEventTriggered?.(data);
     });
 
-    this.socket?.on('player_joined', (data) => {
+    this.socket?.on('player_joined', (data: any) => {
       this.onPlayerJoined?.(data);
     });
 
-    this.socket?.on('game_completed', (data) => {
+    this.socket?.on('game_completed', (data: any) => {
       this.onGameCompleted?.(data);
     });
 
-    this.socket?.on('game_stopped', (data) => {
+    this.socket?.on('game_stopped', (data: any) => {
       this.onGameStopped?.(data);
     });
+  }
+
+  // Join game as a viewer
+  async joinAsViewer(gameId: string, username: string, userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await axios.post(`${GAME_API_URL}/games/${gameId}/viewers/join`, {
+        username,
+        userId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.userToken}`,
+          'X-Arena-Arcade-Game-ID': ARENA_GAME_ID,
+          'X-Vorld-App-ID': VORLD_APP_ID,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('✅ Viewer joined:', response.data);
+
+      return {
+        success: true,
+        data: response.data.data
+      };
+    } catch (error: any) {
+      console.error('❌ Join as viewer error:', error.response?.data);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.error?.message || 'Failed to join as viewer. Backend endpoint may not exist yet.'
+      };
+    }
+  }
+
+  // Get viewers for a game
+  async getViewers(gameId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const response = await axios.get(`${GAME_API_URL}/games/${gameId}/viewers`, {
+        headers: {
+          'Authorization': `Bearer ${this.userToken}`,
+          'X-Arena-Arcade-Game-ID': ARENA_GAME_ID,
+          'X-Vorld-App-ID': VORLD_APP_ID
+        }
+      });
+
+      return {
+        success: true,
+        data: response.data.data?.viewers || []
+      };
+    } catch (error: any) {
+      console.error('❌ Get viewers error:', error.response?.data);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to get viewers. Backend endpoint may not exist yet.'
+      };
+    }
+  }
+
+  // Send viewer heartbeat
+  async viewerHeartbeat(gameId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      await axios.post(`${GAME_API_URL}/games/${gameId}/viewers/heartbeat`, {
+        userId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.userToken}`,
+          'X-Arena-Arcade-Game-ID': ARENA_GAME_ID,
+          'X-Vorld-App-ID': VORLD_APP_ID,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Heartbeat failed. Backend endpoint may not exist yet.'
+      };
+    }
   }
 
   // Get game details

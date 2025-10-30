@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { useVorldAuth } from "../../providers";
 import { ArenaGameService, GameState, GamePackage } from "../../../utils/arenaGameService";
+import { viewerService } from "../../../utils/viewerService";
+import DroneSelectionModal from "../../../components/DroneSelectionModal";
+import { getDroneById } from "../../../utils/droneData";
 import Link from "next/link";
 
 export default function ViewerPortalPage() {
@@ -13,6 +16,11 @@ export default function ViewerPortalPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
+  const [viewerUserId, setViewerUserId] = useState<string>(''); // Store the userId we used to join
+
+  // Drone selection
+  const [showDroneModal, setShowDroneModal] = useState(false);
+  const [selectedDroneType, setSelectedDroneType] = useState<string | null>(null);
 
   // Boost system
   const [selectedPlayer, setSelectedPlayer] = useState('');
@@ -87,6 +95,46 @@ export default function ViewerPortalPage() {
     };
   }, [arenaService]);
 
+  // Heartbeat to keep viewer active and check if game is still active
+  useEffect(() => {
+    if (!gameState || !viewerUserId) return;
+
+    const heartbeat = setInterval(async () => {
+      // Send heartbeat
+      const result = await viewerService.sendHeartbeat(gameState.gameId, viewerUserId);
+      if (!result.success) {
+        console.warn('⚠️ Heartbeat failed:', result.error);
+      } else {
+        console.log('💓 Heartbeat sent successfully');
+      }
+
+      // Check if game is still active (only kick out if truly ended)
+      const gameCheck = await arenaService.getGameDetails(gameState.gameId);
+
+      console.log('🔍 Game check result:', {
+        success: gameCheck.success,
+        status: gameCheck.data?.status,
+        hasData: !!gameCheck.data
+      });
+
+      // Only disconnect if game is completed/cancelled, not just status changes
+      if (gameCheck.data?.status === 'completed' || gameCheck.data?.status === 'cancelled') {
+        console.log('🚪 Game has ended');
+        setError('This game has been completed or cancelled by the streamer.');
+        setGameState(null);
+        setViewerUserId('');
+        clearInterval(heartbeat);
+      } else if (!gameCheck.success) {
+        // Only show warning, don't disconnect yet - could be temporary network issue
+        console.warn('⚠️ Could not check game status, will retry next heartbeat');
+      } else {
+        console.log('✅ Game is still active, status:', gameCheck.data?.status);
+      }
+    }, 10000); // Update every 10 seconds
+
+    return () => clearInterval(heartbeat);
+  }, [gameState, viewerUserId, arenaService]);
+
   const addEvent = (type: string, data: any) => {
     setEvents(prev => [{
       type,
@@ -98,6 +146,14 @@ export default function ViewerPortalPage() {
   const handleJoinGame = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Show drone selection modal first
+    setShowDroneModal(true);
+  };
+
+  const handleDroneSelected = async (droneId: string) => {
+    setSelectedDroneType(droneId);
+    setShowDroneModal(false);
     setIsJoining(true);
 
     try {
@@ -111,18 +167,41 @@ export default function ViewerPortalPage() {
       // Set the token in arena service for API calls
       arenaService.setUserToken(token);
 
+      // Join as viewer using our own backend
+      const username = user?.username || `Viewer_${Date.now()}`;
+      const userId = user?.id || `temp_${Date.now()}`;
+
+      console.log('🎮 Attempting to join as viewer:', { username, userId, gameId, droneType: droneId });
+
+      // Register with our viewer service, including selected drone
+      const joinResult = await viewerService.joinViewer(gameId, userId, username, droneId);
+
+      if (!joinResult.success) {
+        setError(joinResult.error || 'Failed to join as viewer');
+        setIsJoining(false);
+        return;
+      }
+
+      console.log('✅ Successfully joined as viewer:', joinResult.data);
+      console.log(`🎮 You are Drone ${joinResult.data?.droneId}`);
+
+      // Store the userId we used for heartbeats
+      setViewerUserId(userId);
+
+      // Get game details from Arena Arcade
       const result = await arenaService.getGameDetails(gameId);
 
       if (result.success && result.data) {
-        console.log('Game details response:', result.data);
+        console.log('✅ Successfully connected to game:', result.data);
         setGameState(result.data);
 
         // Load items catalog
         loadItemsCatalog();
       } else {
-        setError(result.error || 'Failed to join game');
+        setError(result.error || 'Game not found. Please check the Game ID.');
       }
     } catch (err: any) {
+      console.error('❌ Join game error:', err);
       setError(err.message || 'Failed to join game');
     } finally {
       setIsJoining(false);
@@ -228,7 +307,7 @@ export default function ViewerPortalPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold text-cyan-400 mb-2 font-mek">VIEWER PORTAL</h1>
-            <p className="text-gray-400">Join a streamer's game and boost your favorite players!</p>
+            <p className="text-gray-400">Join a streamer&apos;s game and boost your favorite players!</p>
           </div>
           <Link href="/" className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
             ← Back to Menu
@@ -260,7 +339,7 @@ export default function ViewerPortalPage() {
                     disabled={isJoining}
                   />
                   <p className="text-gray-500 text-sm mt-1">
-                    Get the Game ID from the streamer's chat or overlay
+                    Get the Game ID from the streamer&apos;s chat or overlay
                   </p>
                 </div>
 
@@ -273,7 +352,7 @@ export default function ViewerPortalPage() {
                 </button>
               </form>
 
-              <div className="mt-6 p-4 bg-gray-900/50 rounded">
+              {/* <div className="mt-6 p-4 bg-gray-900/50 rounded">
                 <h3 className="text-sm font-semibold text-cyan-300 mb-2">How does it work?</h3>
                 <ul className="text-sm text-gray-400 space-y-1">
                   <li>• Get the Game ID from your favorite streamer</li>
@@ -282,7 +361,7 @@ export default function ViewerPortalPage() {
                   <li>• Drop power-ups and items into the game</li>
                   <li>• Watch the action unfold in real-time!</li>
                 </ul>
-              </div>
+              </div> */}
             </div>
           </div>
         ) : (
@@ -299,114 +378,60 @@ export default function ViewerPortalPage() {
                     <p className="text-white font-mono text-sm">{gameState.gameId}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Status</p>
-                    <p className="text-white capitalize">{gameState.status}</p>
+                    <p className="text-gray-400 text-sm">Your Role</p>
+                    <p className="text-cyan-400 font-semibold">🎮 Viewer</p>
                   </div>
                   <div>
+                    <p className="text-gray-400 text-sm">Username</p>
+                    <p className="text-white font-semibold">{user?.username || 'Guest'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Status</p>
+                    <p className="text-green-400 font-bold">✅ CONNECTED</p>
+                  </div>
+                  {/* <div>
                     <p className="text-gray-400 text-sm">Arena Active</p>
                     <p className={arenaActive ? 'text-green-400' : 'text-red-400'}>
                       {arenaActive ? 'LIVE' : 'Waiting'}
                     </p>
-                  </div>
+                  </div> */}
                   {countdown !== null && (
                     <div>
                       <p className="text-gray-400 text-sm">Countdown</p>
                       <p className="text-cyan-400 text-2xl font-bold">{countdown}s</p>
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* Player Boost Card */}
-              <div className="p-6 bg-gray-800 rounded-lg border border-cyan-500/30">
-                <h3 className="text-xl font-bold text-green-400 mb-4">Boost Player</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Select Player</label>
-                    <select
-                      value={selectedPlayer}
-                      onChange={(e) => setSelectedPlayer(e.target.value)}
-                      className="w-full p-2 bg-gray-900 border border-cyan-500/30 text-white rounded text-sm"
-                    >
-                      <option value="">Choose player...</option>
-                      {gameState.evaGameDetails?.players?.map((player) => (
-                        <option key={player.id} value={player.id}>
-                          {player.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Viewer Info */}
 
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Boost Amount</label>
-                    <select
-                      value={boostAmount}
-                      onChange={(e) => setBoostAmount(Number(e.target.value))}
-                      className="w-full p-2 bg-gray-900 border border-cyan-500/30 text-white rounded text-sm"
-                    >
-                      <option value={25}>25 Points (25 coins)</option>
-                      <option value={50}>50 Points (50 coins)</option>
-                      <option value={100}>100 Points (100 coins)</option>
-                      <option value={200}>200 Points (200 coins)</option>
-                      <option value={500}>500 Points (500 coins)</option>
-                    </select>
-                  </div>
-
+                  {/* Selected Drone Info */}
+                  {selectedDroneType && (
+                    <div className="mt-3 p-3 bg-purple-900/20 rounded-lg border border-purple-500/30">
+                      <p className="text-purple-300 text-sm font-semibold mb-2"> Your Drone</p>
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-white font-bold">{getDroneById(selectedDroneType)?.name || 'Unknown Drone'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Leave Game Button */}
                   <button
-                    onClick={handleBoostPlayer}
-                    disabled={isBoosting || !selectedPlayer}
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold rounded text-sm"
+                    onClick={async () => {
+                      if (gameState && viewerUserId) {
+                        await viewerService.leaveGame(gameState.gameId, viewerUserId);
+                      }
+                      setGameState(null);
+                      setViewerUserId('');
+                      setError('');
+                    }}
+                    className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded mt-3 text-sm"
                   >
-                    {isBoosting ? 'BOOSTING...' : `BOOST +${boostAmount}`}
+                    🚪 LEAVE GAME
                   </button>
                 </div>
               </div>
 
-              {/* Item Drop Card */}
-              <div className="p-6 bg-gray-800 rounded-lg border border-cyan-500/30">
-                <h3 className="text-xl font-bold text-pink-400 mb-4">Drop Item</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Select Item</label>
-                    <select
-                      value={selectedItem}
-                      onChange={(e) => setSelectedItem(e.target.value)}
-                      className="w-full p-2 bg-gray-900 border border-cyan-500/30 text-white rounded text-sm"
-                    >
-                      <option value="">Choose item...</option>
-                      {itemsCatalog.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} - {item.cost} coins
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Target Player</label>
-                    <select
-                      value={targetPlayer}
-                      onChange={(e) => setTargetPlayer(e.target.value)}
-                      className="w-full p-2 bg-gray-900 border border-cyan-500/30 text-white rounded text-sm"
-                    >
-                      <option value="">Choose player...</option>
-                      {gameState.evaGameDetails?.players?.map((player) => (
-                        <option key={player.id} value={player.id}>
-                          {player.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    onClick={handleDropItem}
-                    disabled={isDroppingItem || !selectedItem || !targetPlayer}
-                    className="w-full py-2 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 text-white font-bold rounded text-sm"
-                  >
-                    {isDroppingItem ? 'DROPPING...' : 'DROP ITEM'}
-                  </button>
-                </div>
-              </div>
 
               {/* Recent Boosts */}
               {boostHistory.length > 0 && (
@@ -426,74 +451,16 @@ export default function ViewerPortalPage() {
                 </div>
               )}
             </div>
-
-            {/* Middle Column - Players */}
-            <div className="p-6 bg-gray-800 rounded-lg border border-cyan-500/30">
-              <h3 className="text-xl font-bold text-purple-400 mb-4">Players</h3>
-              <div className="space-y-3">
-                {gameState.evaGameDetails?.players?.map((player) => (
-                  <div key={player.id} className="p-4 bg-gray-900 rounded">
-                    <h4 className="text-white font-bold mb-2">{player.name}</h4>
-                    <p className="text-xs text-gray-400 font-mono">{player.id}</p>
-                  </div>
-                )) || (
-                  <p className="text-gray-500 text-sm text-center py-4">No players found</p>
-                )}
-              </div>
-
-              {gameState.evaGameDetails?.packages && gameState.evaGameDetails.packages.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-orange-400 mb-4">Available Packages</h3>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {gameState.evaGameDetails.packages.map((pkg) => (
-                      <div key={pkg.id} className="p-3 bg-gray-900 rounded text-sm">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-white font-semibold">{pkg.name}</span>
-                          <span className="text-yellow-400">{pkg.cost} coins</span>
-                        </div>
-                        <p className="text-gray-400 text-xs mb-2">Type: {pkg.type}</p>
-                        {pkg.stats.length > 0 && (
-                          <div className="text-xs text-gray-500">
-                            {pkg.stats[0].description}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column - Event Feed */}
-            <div className="p-6 bg-gray-800 rounded-lg border border-cyan-500/30">
-              <h3 className="text-xl font-bold text-orange-400 mb-4">Live Events</h3>
-              <div className="space-y-2 max-h-[800px] overflow-y-auto">
-                {events.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">
-                    No events yet. Waiting for game activity...
-                  </p>
-                ) : (
-                  events.map((event, i) => (
-                    <div key={i} className="p-3 bg-gray-900 rounded">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`font-semibold text-sm ${getEventColor(event.type)}`}>
-                          {event.type.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {event.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <pre className="text-xs text-gray-400 overflow-x-auto">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
         )}
       </div>
+
+      {/* Drone Selection Modal */}
+      <DroneSelectionModal
+        isOpen={showDroneModal}
+        onSelect={handleDroneSelected}
+        onClose={() => setShowDroneModal(false)}
+      />
     </main>
   );
 }

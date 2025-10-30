@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useVorldAuth } from "../providers";
 import { ArenaGameService, GameState, GamePlayer } from "../../utils/arenaGameService";
+import { viewerService, Viewer } from "../../utils/viewerService";
+import { getDroneById } from "../../utils/droneData";
 import Link from "next/link";
 
 export default function ArenaPage() {
@@ -25,6 +27,59 @@ export default function ArenaPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [arenaActive, setArenaActive] = useState(false);
   const [boostHistory, setBoostHistory] = useState<any[]>([]);
+
+  // Viewer tracking
+  const [connectedViewers, setConnectedViewers] = useState<Viewer[]>([]);
+
+  // Load game state from localStorage on mount
+  useEffect(() => {
+    const savedGameState = localStorage.getItem('arena_game_state');
+    if (savedGameState) {
+      try {
+        const parsed = JSON.parse(savedGameState);
+        setGameState(parsed);
+        console.log('📦 Restored game state from localStorage:', parsed);
+      } catch (err) {
+        console.error('Failed to parse saved game state:', err);
+        localStorage.removeItem('arena_game_state');
+      }
+    }
+  }, []);
+
+  // Save game state to localStorage whenever it changes
+  useEffect(() => {
+    if (gameState) {
+      localStorage.setItem('arena_game_state', JSON.stringify(gameState));
+      console.log('💾 Saved game state to localStorage');
+    } else {
+      localStorage.removeItem('arena_game_state');
+    }
+  }, [gameState]);
+
+  // Poll for connected viewers from our own backend
+  useEffect(() => {
+    if (!gameState) return;
+
+    const checkViewers = async () => {
+      const result = await viewerService.getViewers(gameState.gameId);
+
+      if (result.success && result.data) {
+        console.log('✅ Fetched viewers:', result.data);
+        setConnectedViewers(result.data);
+      } else {
+        console.warn('⚠️ Get viewers error:', result.error);
+        setConnectedViewers([]);
+      }
+    };
+
+    // Check immediately
+    checkViewers();
+
+    // Then check every 5 seconds
+    const interval = setInterval(checkViewers, 5000);
+
+    return () => clearInterval(interval);
+  }, [gameState]);
 
   // Set up WebSocket event listeners
   useEffect(() => {
@@ -72,6 +127,15 @@ export default function ArenaPage() {
       addEvent('event_triggered', data);
     };
 
+    arenaService.onPlayerJoined = (data) => {
+      console.log('Player joined:', data);
+      addEvent('player_joined', data);
+      // Refresh game details to update player count
+      if (gameState) {
+        handleRefreshGameDetails();
+      }
+    };
+
     arenaService.onGameCompleted = (data) => {
       console.log('Game completed:', data);
       addEvent('game_completed', data);
@@ -80,7 +144,7 @@ export default function ArenaPage() {
     return () => {
       arenaService.disconnect();
     };
-  }, [arenaService]);
+  }, [arenaService, gameState]);
 
   const addEvent = (type: string, data: any) => {
     setEvents(prev => [{
@@ -99,6 +163,14 @@ export default function ArenaPage() {
       const token = authService.getAccessToken();
       if (!token) {
         setError('Not authenticated. Please login again.');
+        setIsInitializing(false);
+        return;
+      }
+
+      // Basic Twitch URL validation
+      if (!streamUrl || !streamUrl.includes('twitch.tv')) {
+        setError('Please enter a valid Twitch stream URL (e.g., https://www.twitch.tv/username)');
+        setIsInitializing(false);
         return;
       }
 
@@ -106,7 +178,8 @@ export default function ArenaPage() {
 
       if (result.success && result.data) {
         setGameState(result.data);
-        console.log('Game initialized:', result.data);
+        console.log('🎮 Game initialized:', result.data);
+        console.log('📊 Initial players from API:', result.data.evaGameDetails?.players);
       } else {
         setError(result.error || 'Failed to initialize game');
       }
@@ -131,14 +204,30 @@ export default function ArenaPage() {
       arenaService.setUserToken(token);
 
       const result = await arenaService.getGameDetails(gameState.gameId);
+      console.log('🔄 Full refresh result:', JSON.stringify(result, null, 2));
       if (result.success && result.data) {
-        console.log('Refreshed game details:', result.data);
+        console.log('✅ Refreshed game details:', result.data);
+        console.log('📊 evaGameDetails:', result.data.evaGameDetails);
+        console.log('📊 Players array:', result.data.evaGameDetails?.players);
         setGameState(result.data);
       } else {
         console.error('Failed to refresh:', result.error);
       }
     } catch (err: any) {
       console.error('Refresh error:', err);
+    }
+  };
+
+  const handleClearGame = () => {
+    if (confirm('Are you sure you want to clear the current game? This will allow you to create a new room.')) {
+      setGameState(null);
+      setConnectedViewers([]);
+      setBoostHistory([]);
+      setEvents([]);
+      setArenaActive(false);
+      setCountdown(null);
+      localStorage.removeItem('arena_game_state');
+      console.log('🗑️ Game state cleared');
     }
   };
 
@@ -234,8 +323,14 @@ export default function ArenaPage() {
                     disabled={isInitializing}
                   />
                   <p className="text-gray-500 text-sm mt-1">
-                    Enter your Twitch, YouTube, or other streaming platform URL
+                    Enter your Twitch stream URL (e.g., https://twitch.tv/your_channel)
                   </p>
+                  <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded">
+                    <p className="text-yellow-400 text-sm font-semibold">⚠️ Important:</p>
+                    <p className="text-yellow-300/80 text-xs mt-1">
+                      Make sure your stream is LIVE before creating the game. Viewers will be watching your stream during gameplay.
+                    </p>
+                  </div>
                 </div>
 
                 <button
@@ -281,7 +376,7 @@ export default function ArenaPage() {
                       {gameState.arenaActive ? 'LIVE' : 'Waiting'}
                     </p>
                   </div>
-                  {gameState.currentBoostCycle && (
+                  {/* {gameState.currentBoostCycle && (
                     <div>
                       <p className="text-gray-400 text-sm">Boost Cycle</p>
                       <p className="text-cyan-400 text-xl font-bold">#{gameState.currentBoostCycle}</p>
@@ -292,7 +387,7 @@ export default function ArenaPage() {
                       <p className="text-gray-400 text-sm">Objective</p>
                       <p className="text-white text-sm">{gameState.currentObjective}</p>
                     </div>
-                  )}
+                  )} */}
                   {countdown !== null && (
                     <div>
                       <p className="text-gray-400 text-sm">Countdown</p>
@@ -305,176 +400,100 @@ export default function ArenaPage() {
                   >
                     🔄 Refresh Game Details
                   </button>
-                </div>
-              </div>
-
-              {/* Player Boost Card */}
-              <div className="p-6 bg-gray-800 rounded-lg border border-purple-500/30">
-                <h3 className="text-xl font-bold text-green-400 mb-4">Boost Player</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Select Player</label>
-                    <select
-                      value={selectedPlayer}
-                      onChange={(e) => setSelectedPlayer(e.target.value)}
-                      className="w-full p-2 bg-gray-900 border border-purple-500/30 text-white rounded text-sm"
-                    >
-                      <option value="">Choose player...</option>
-                      <option value="player">Player</option>
-                      <option value="aquatican">Aquatican</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-300 mb-2 text-sm">Boost Amount</label>
-                    <select
-                      value={boostAmount}
-                      onChange={(e) => setBoostAmount(Number(e.target.value))}
-                      className="w-full p-2 bg-gray-900 border border-purple-500/30 text-white rounded text-sm"
-                    >
-                      <option value={25}>25 Points</option>
-                      <option value={50}>50 Points</option>
-                      <option value={100}>100 Points</option>
-                      <option value={200}>200 Points</option>
-                      <option value={500}>500 Points</option>
-                    </select>
-                  </div>
 
                   <button
-                    onClick={handleBoostPlayer}
-                    disabled={isBoosting || !selectedPlayer}
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold rounded text-sm"
+                    onClick={handleClearGame}
+                    className="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded mt-3"
                   >
-                    {isBoosting ? 'BOOSTING...' : `BOOST +${boostAmount}`}
+                    🗑️ Clear Game & Create New Room
                   </button>
-                </div>
-              </div>
 
-              {/* Recent Boosts */}
-              {boostHistory.length > 0 && (
-                <div className="p-6 bg-gray-800 rounded-lg border border-purple-500/30">
-                  <h3 className="text-xl font-bold text-yellow-400 mb-4">Recent Boosts</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {boostHistory.map((boost, i) => (
-                      <div key={i} className="p-2 bg-gray-900 rounded text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-white font-semibold">{boost.playerName}</span>
-                          <span className="text-green-400">+{boost.currentCyclePoints}</span>
-                        </div>
-                        <p className="text-gray-400 text-xs">by {boost.boosterUsername || 'Anonymous'}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Middle Column - Players */}
-            <div className="p-6 bg-gray-800 rounded-lg border border-purple-500/30">
-              <h3 className="text-xl font-bold text-cyan-400 mb-4">Players</h3>
-              <div className="space-y-3">
-                {/* Player 1 */}
-                <div className="p-4 bg-gray-900 rounded">
-                  <h4 className="text-white font-bold mb-2">Player</h4>
-                  <div className="text-sm space-y-1">
-                    <p className="text-gray-400">Total Boost: <span className="text-green-400 font-semibold">{gameState.playerBoostPoints || 0}</span></p>
-                    <p className="text-gray-400">Cycle Points: <span className="text-yellow-400 font-semibold">{gameState.playerCurrentCyclePoints || 0}</span></p>
-                  </div>
-                </div>
-
-                {/* Player 2 */}
-                <div className="p-4 bg-gray-900 rounded">
-                  <h4 className="text-white font-bold mb-2">Aquatican</h4>
-                  <div className="text-sm space-y-1">
-                    <p className="text-gray-400">Total Boost: <span className="text-green-400 font-semibold">{gameState.aquaticanBoostPoints || 0}</span></p>
-                    <p className="text-gray-400">Cycle Points: <span className="text-yellow-400 font-semibold">{gameState.aquaticanCurrentCyclePoints || 0}</span></p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monoliths Status */}
-              <div className="mt-6">
-                <h3 className="text-xl font-bold text-purple-400 mb-4">Monoliths</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 bg-gray-900 rounded">
-                    <span className="text-gray-300">Monolith 1</span>
-                    <span className={gameState.monolith1Active ? 'text-green-400' : 'text-red-400'}>
-                      {gameState.monolith1Active ? '✓ Active' : '✗ Inactive'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-gray-900 rounded">
-                    <span className="text-gray-300">Monolith 2</span>
-                    <span className={gameState.monolith2Active ? 'text-green-400' : 'text-red-400'}>
-                      {gameState.monolith2Active ? '✓ Active' : '✗ Inactive'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-gray-900 rounded">
-                    <span className="text-gray-300">Monolith 3</span>
-                    <span className={gameState.monolith3Active ? 'text-green-400' : 'text-red-400'}>
-                      {gameState.monolith3Active ? '✓ Active' : '✗ Inactive'}
-                    </span>
-                  </div>
-                  <div className="mt-3 p-3 bg-purple-900/30 rounded border border-purple-500/30">
-                    <p className="text-sm text-gray-300">
-                      Activated: <span className="text-purple-400 font-bold">{gameState.monolithsActivated || 0}/3</span>
-                    </p>
-                    <p className="text-sm text-gray-300 mt-1">
-                      Mothercrab: <span className={gameState.mothercrabKilled ? 'text-green-400' : 'text-red-400'}>
-                        {gameState.mothercrabKilled ? 'Defeated ✓' : 'Alive ✗'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {gameState.evaGameDetails?.packages && gameState.evaGameDetails.packages.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-pink-400 mb-4">Available Packages</h3>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {gameState.evaGameDetails.packages.map((pkg) => (
-                      <div key={pkg.id} className="p-3 bg-gray-900 rounded text-sm">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-white font-semibold">{pkg.name}</span>
-                          <span className="text-yellow-400">{pkg.cost} coins</span>
-                        </div>
-                        <p className="text-gray-400 text-xs mb-2">Type: {pkg.type}</p>
-                        {pkg.stats.length > 0 && (
-                          <div className="text-xs text-gray-500">
-                            {pkg.stats[0].description}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column - Event Feed */}
-            <div className="p-6 bg-gray-800 rounded-lg border border-purple-500/30">
-              <h3 className="text-xl font-bold text-orange-400 mb-4">Live Events</h3>
-              <div className="space-y-2 max-h-[800px] overflow-y-auto">
-                {events.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">
-                    No events yet. Waiting for game activity...
+                  {/* Launch Game Button */}
+                  {connectedViewers.length > 0 ? (
+                    <a
+                      href={`/unity?gameId=${gameState.gameId}&scene=8&role=streamer`}
+                      className="block w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-center rounded mt-3 transition-all transform hover:scale-105"
+                    >
+                      🎮 LAUNCH GAME (STREAMER)
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full py-3 bg-gray-600 text-gray-400 font-bold text-center rounded mt-3 cursor-not-allowed"
+                    >
+                      🔒 WAITING FOR VIEWERS
+                    </button>
+                  )}
+                  <p className="text-gray-400 text-xs text-center mt-2">
+                    {connectedViewers.length > 0
+                      ? 'Launch Unity as the Mech pilot'
+                      : 'At least 1 viewer required to start'
+                    }
                   </p>
-                ) : (
-                  events.map((event, i) => (
-                    <div key={i} className="p-3 bg-gray-900 rounded">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`font-semibold text-sm ${getEventColor(event.type)}`}>
-                          {event.type.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {event.timestamp.toLocaleTimeString()}
-                        </span>
+                </div>
+              </div>
+
+            </div>
+            <div className="p-6 bg-gray-800 rounded-lg border border-cyan-500/30">
+              <h3 className="text-xl font-bold text-cyan-400 mb-4">
+                Connected Viewers ({connectedViewers.length})
+              </h3>
+              <div className="space-y-3">
+                {/* Room Code */}
+                <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/30">
+                  <p className="text-cyan-300 font-semibold text-xs mb-1">📋 Room Code:</p>
+                  <p className="text-white font-mono text-xl text-center bg-gray-900 py-2 rounded">
+                    {gameState.gameId}
+                  </p>
+                </div>
+
+                {/* Viewer List */}
+                <div className="space-y-2">
+                  {connectedViewers.length > 0 ? (
+                    connectedViewers.map((viewer, index) => (
+                      <div
+                        key={viewer.userId}
+                        className="p-3 bg-gray-700/50 rounded-lg border border-cyan-500/20 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="text-white font-semibold">{viewer.username}</p>
+                            <p className="text-gray-400 text-xs">
+                              {viewer.selectedDroneType
+                                ? `🚁 ${getDroneById(viewer.selectedDroneType)?.name || 'Drone'}`
+                                : `Joined ${new Date(viewer.joinedAt).toLocaleTimeString()}`
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-green-400 text-sm font-bold">
+                          🟢 ONLINE
+                        </div>
                       </div>
-                      <pre className="text-xs text-gray-400 overflow-x-auto">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-400 text-sm mb-2">No viewers connected yet</p>
+                      <p className="text-gray-500 text-xs">Share the room code above!</p>
                     </div>
-                  ))
-                )}
+                  )}
+                </div>
+
+                {/* Instructions */}
+                <details className="mt-3">
+                  <summary className="text-cyan-400 text-sm cursor-pointer hover:text-cyan-300">
+                    How viewers join →
+                  </summary>
+                  <div className="mt-2 text-gray-300 text-xs space-y-1 pl-4">
+                    <p>1. Go to <span className="text-cyan-400 font-mono">/arena/viewer</span></p>
+                    <p>2. Enter the room code</p>
+                    <p>3. Click &quot;JOIN GAME&quot;</p>
+                    <p>4. They&apos;ll stay on viewer portal to watch</p>
+                  </div>
+                </details>
               </div>
             </div>
           </div>

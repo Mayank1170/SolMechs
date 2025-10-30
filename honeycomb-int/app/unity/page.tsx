@@ -1,16 +1,24 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { viewerService } from '../../utils/viewerService'
 
 // Declare Unity global function
 declare global {
   function createUnityInstance(canvas: HTMLCanvasElement, config: any, onProgress?: (progress: number) => void): Promise<any>
 }
 
-export default function UnityPage() {
+function UnityPageContent() {
+  const searchParams = useSearchParams()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const loadingBarRef = useRef<HTMLDivElement>(null)
+
+  // Get URL parameters
+  const gameId = searchParams?.get('gameId') || ''
+  const scene = searchParams?.get('scene') || '8'
+  const role = searchParams?.get('role') || 'viewer' // 'streamer' or 'viewer'
 
   useEffect(() => {
     const loadUnityScript = () => {
@@ -154,7 +162,49 @@ export default function UnityPage() {
           
           // Make Unity instance globally available
           ;(window as any).unityInstance = unityInstance
-          
+
+          // Fetch viewer data and send to Unity if we have a gameId
+          if (gameId) {
+            console.log('🎮 Fetching viewer data for game:', gameId)
+            viewerService.getViewers(gameId).then(result => {
+              console.log('📊 Full viewer result:', result)
+
+              if (result.success && result.data) {
+                console.log('📊 Viewer data array:', result.data)
+                console.log('📊 Number of viewers:', result.data.length)
+
+                // Send viewer/drone data to Unity
+                const viewerData = result.data.map((viewer: any) => {
+                  console.log('👤 Processing viewer:', viewer)
+                  return {
+                    userId: viewer.userId,
+                    username: viewer.username,
+                    droneId: viewer.droneId,
+                    selectedDroneType: viewer.selectedDroneType || 'drone1'
+                  }
+                })
+
+                // Send to Unity GameManager
+                const dataString = JSON.stringify({
+                  gameId,
+                  role,
+                  viewers: viewerData
+                })
+
+                console.log('📤 Sending to Unity:', dataString)
+
+                // Send message to Unity GameManager
+                // Unity should have a GameObject named "GameManager" with a method "ReceiveGameData"
+                try {
+                  unityInstance.SendMessage('GameManager', 'ReceiveGameData', dataString)
+                  console.log('✅ Sent game data to Unity')
+                } catch (err) {
+                  console.warn('⚠️ Could not send to GameManager (may not exist yet):', err)
+                }
+              }
+            })
+          }
+
           // PSG1 JavaScript Functions for Unity WebGL
           ;(window as any).GetWalletAddress = function() {
             // console.log("🔗 PSG1 Template: Unity requesting wallet address")
@@ -335,4 +385,30 @@ export default function UnityPage() {
       `}</style>
     </div>
   )
+}
+
+export default function UnityPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        margin: 0,
+        padding: 0,
+        background: "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)",
+        backgroundAttachment: "fixed",
+        fontFamily: "Arial, sans-serif",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        overflow: "hidden"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>⚙️</div>
+          <p style={{ color: "white", fontSize: "1.5rem" }}>Loading Unity...</p>
+        </div>
+      </div>
+    }>
+      <UnityPageContent />
+    </Suspense>
+  );
 }
