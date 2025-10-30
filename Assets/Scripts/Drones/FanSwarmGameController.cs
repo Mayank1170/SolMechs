@@ -46,6 +46,42 @@ public class FanSwarmGameController : MonoBehaviour
         battleManager.StartTurn();
     }
 
+    // Called by GameManager after updating drone slots based on viewer selection
+    public void ReloadEnemyDrones()
+    {
+        Debug.Log("[FanSwarm] 🔄 Reloading enemy drones after GameManager update...");
+
+        var droneLoader = enemyMechObject.GetComponent<DroneSwarmLoader>();
+        DroneSwarmUnit newEnemy = droneLoader?.GetUnitData();
+
+        if (newEnemy == null)
+        {
+            Debug.LogError("[FanSwarm] ❌ Failed to reload enemy drones!");
+            return;
+        }
+
+        Debug.Log($"[FanSwarm] ✅ Reloaded enemy: {newEnemy.Name}");
+
+        // Update battle manager with new enemy data
+        battleManager.enemyUnit = newEnemy;
+
+        // Recalculate max HPs for the new drones
+        battleManager.enemyMaxHPs.Clear();
+        battleManager.enemyMaxHPs[ModuleSlot.Matrix] = newEnemy.matrixHP;
+        foreach (var slot in newEnemy.partStatuses.Keys)
+        {
+            battleManager.enemyMaxHPs[slot] = newEnemy.partStatuses[slot].currentHP;
+        }
+
+        // Reinitialize UI health bars with new drone data
+        uiManager.InitializeHealthBars(battleManager.playerUnit, newEnemy, battleManager.playerMaxHPs, battleManager.enemyMaxHPs);
+
+        // Reinitialize drone animations with new drones
+        InitializeDroneAnimations(droneLoader);
+
+        Debug.Log("[FanSwarm] ✅ Enemy drones successfully reloaded with viewer selections!");
+    }
+
     private void InitializeDroneAnimations(DroneSwarmLoader droneLoader)
     {
         if (droneLoader == null || uiManager == null) return;

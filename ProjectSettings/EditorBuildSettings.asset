@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/8_DroneSwarm.unity
+    guid: 1d45dd6dbf7a5e848a70adfba7b5d99b
+  - enabled: 1
     path: Assets/Scenes/1_Main_Menu.unity
     guid: b831e6122ab2c3145a670dc7958d0f6b
   - enabled: 1
